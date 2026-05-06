@@ -1,0 +1,11 @@
+# Redirect semua request ke index.php (kecuali file yang memang ada)
+# Ini diperlukan agar URL seperti /admin/product bisa diproses oleh PHP
+
+RewriteEngine On
+
+# Jika file atau folder yang diminta memang ada, langsung akses (misal: assets/css/style.css)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Selain itu, arahkan ke index.php
+RewriteRule ^(.*)$ index.php [QSA,L]

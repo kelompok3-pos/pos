@@ -1,0 +1,39 @@
+/* ============================================================
+   CUSTOM STYLES — POS App
+   ============================================================
+   Tambahkan custom CSS di sini.
+   Bootstrap 5 sudah di-load via CDN di layout.
+   ============================================================ */
+
+/* Body */
+body {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Card hover effect */
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Table */
+.table th {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Badge */
+.badge {
+    font-weight: 500;
+}

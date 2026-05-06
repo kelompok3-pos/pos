@@ -1,0 +1,20 @@
+# Environment
+.env
+
+# Storage
+storage/logs/*
+!storage/logs/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker volumes (auto-generated)
+db_data/
+mariadb_data/
