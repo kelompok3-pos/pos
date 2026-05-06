@@ -39,7 +39,7 @@ docker compose up -d
 docker compose down
 
 # Lihat log aplikasi
-docker compose logs -f app
+docker compose logs -f php-app
 
 # Lihat log database
 docker compose logs -f db
@@ -102,12 +102,14 @@ APP_URL=http://localhost/POS/public
 
 DB_HOST=localhost
 DB_PORT=3306
-DB_DATABASE=root_db // atau sesuaikan dengan database yang di xampp
-DB_USERNAME=root //atau sesuaikan dengan database yang di xampp
-DB_PASSWORD= //atau sesuaikan dengan database yang di xampp
+DB_DATABASE=pos_db
+DB_USERNAME=root
+DB_PASSWORD=
 ```
 
-> **Catatan:** XAMPP secara default menggunakan `root` tanpa password untuk MySQL.
+> **Catatan:** Sesuaikan `DB_DATABASE`, `DB_USERNAME`, dan `DB_PASSWORD` dengan konfigurasi MySQL/MariaDB di XAMPP kamu.
+
+> **Catatan:** XAMPP secara default menggunakan user `root` tanpa password untuk MySQL.
 
 ### Langkah 5: Setup Virtual Host (Opsional tapi Direkomendasikan)
 
@@ -226,12 +228,8 @@ POS/
 ├── database/                       # SQL schema
 │   └── pos_db.sql                  # Full database schema
 │
-├── docker/                         # Docker config
-│   ├── php/Dockerfile              # Image PHP + Apache
-│   └── mysql/init.sql              # Auto-create tabel saat pertama run
-│
+├── Dockerfile                      # Image PHP + Apache
 ├── docker-compose.yml              # Docker untuk development
-├── docker-compose.prod.yml         # Docker untuk production
 ├── .env.example                    # Template environment variables
 └── .gitignore
 ```
@@ -369,7 +367,7 @@ CREATE TABLE IF NOT EXISTS categories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-**Selesai!** Buka `http://localhost:8080/admin/category` untuk melihat hasilnya.
+**Selesai!** Buka `http://localhost:3000/admin/category` untuk melihat hasilnya.
 
 ---
 
@@ -405,16 +403,16 @@ Browser → public/index.php → routes.php → Controller → Model → Databas
 
 ## Environment Variables
 
-| Variable      | Default               | Keterangan                             |
-| ------------- | --------------------- | -------------------------------------- |
-| `APP_NAME`    | POS App               | Nama aplikasi (tampil di navbar)       |
-| `APP_ENV`     | local                 | Environment: `local` atau `production` |
-| `APP_URL`     | http://localhost:8080 | Base URL aplikasi                      |
-| `DB_HOST`     | db                    | Hostname database                      |
-| `DB_PORT`     | 3306                  | Port database                          |
-| `DB_DATABASE` | pos_db                | Nama database                          |
-| `DB_USERNAME` | pos_user              | Username database                      |
-| `DB_PASSWORD` | secret                | Password database                      |
+| Variable      | Default (Docker)      | Default (XAMPP)   | Keterangan                             |
+| ------------- | --------------------- | ----------------- | -------------------------------------- |
+| `APP_NAME`    | POS App               | POS App           | Nama aplikasi (tampil di navbar)       |
+| `APP_ENV`     | local                 | local             | Environment: `local` atau `production` |
+| `APP_URL`     | http://localhost:3000  | http://localhost/POS/public | Base URL aplikasi          |
+| `DB_HOST`     | db                    | localhost         | Hostname database                      |
+| `DB_PORT`     | 3306                  | 3306              | Port database                          |
+| `DB_DATABASE` | root_db               | pos_db            | Nama database                          |
+| `DB_USERNAME` | user                  | root              | Username database                      |
+| `DB_PASSWORD` | user                  | *(kosong)*        | Password database                      |
 
 ---
 
@@ -453,7 +451,7 @@ Ubah port di `docker-compose.yml`:
 
 ```yaml
 ports:
-  - "8888:80" # Ganti 8080 ke 8888
+  - "8888:80" # Ganti 3000 ke 8888
 ```
 
 ### Database tidak bisa terkoneksi
