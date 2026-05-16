@@ -49,16 +49,17 @@ class Product
     /**
      * Tambah produk baru
      *
-     * @param array $data ['name', 'price', 'stock', 'description']
+     * @param array $data ['name', 'image', 'price', 'stock', 'description']
      * @return bool
      */
     public function create(array $data): bool
     {
         $stmt = $this->pdo->prepare(
-            "INSERT INTO products (name, price, stock, description) VALUES (?, ?, ?, ?)"
+            "INSERT INTO products (name, image, price, stock, description) VALUES (?, ?, ?, ?, ?)"
         );
         return $stmt->execute([
             $data['name'],
+            $data['image'] ?? null,
             $data['price'],
             $data['stock'],
             $data['description'] ?? '',
@@ -69,21 +70,35 @@ class Product
      * Update produk berdasarkan ID
      *
      * @param int   $id
-     * @param array $data ['name', 'price', 'stock', 'description']
+     * @param array $data ['name', 'image', 'price', 'stock', 'description']
      * @return bool
      */
     public function update(int $id, array $data): bool
     {
         $stmt = $this->pdo->prepare(
-            "UPDATE products SET name = ?, price = ?, stock = ?, description = ? WHERE id = ?"
+            "UPDATE products SET name = ?, image = ?, price = ?, stock = ?, description = ? WHERE id = ?"
         );
         return $stmt->execute([
             $data['name'],
+            $data['image'] ?? null,
             $data['price'],
             $data['stock'],
             $data['description'] ?? '',
             $id,
         ]);
+    }
+
+    /**
+     * Update hanya gambar produk
+     *
+     * @param int         $id
+     * @param string|null $image Nama file gambar
+     * @return bool
+     */
+    public function updateImage(int $id, ?string $image): bool
+    {
+        $stmt = $this->pdo->prepare("UPDATE products SET image = ? WHERE id = ?");
+        return $stmt->execute([$image, $id]);
     }
 
     /**

@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    image VARCHAR(255) DEFAULT NULL,
     price DECIMAL(12,2) NOT NULL DEFAULT 0,
     stock INT NOT NULL DEFAULT 0,
     description TEXT,
@@ -42,9 +43,9 @@ INSERT INTO users (email, password, role) VALUES
 ('kasir@pos.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'kasir');
 
 -- Data Sampel Produk
-INSERT INTO products (name, price, stock, description) VALUES
-('Kopi Arabica', 25000, 100, 'Kopi arabica premium dari Toraja'),
-('Teh Hijau', 15000, 50, 'Teh hijau organik'),
-('Roti Gandum', 18000, 75, 'Roti gandum segar setiap hari'),
-('Susu Segar', 12000, 200, 'Susu segar pasteurisasi 1 liter'),
-('Air Mineral', 5000, 500, 'Air mineral 600ml');
+INSERT INTO products (name, image, price, stock, description) VALUES
+('Kopi Arabica', NULL, 25000, 100, 'Kopi arabica premium dari Toraja'),
+('Teh Hijau', NULL, 15000, 50, 'Teh hijau organik'),
+('Roti Gandum', NULL, 18000, 75, 'Roti gandum segar setiap hari'),
+('Susu Segar', NULL, 12000, 200, 'Susu segar pasteurisasi 1 liter'),
+('Air Mineral', NULL, 5000, 500, 'Air mineral 600ml');
