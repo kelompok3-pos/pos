@@ -21,6 +21,7 @@ class KasirProductController extends Controller
 
     public function __construct()
     {
+        requireRole('kasir');
         $this->productModel = new Product();
     }
 

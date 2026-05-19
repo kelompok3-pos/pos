@@ -23,6 +23,7 @@ class KasirTransactionController extends Controller
 
     public function __construct()
     {
+        requireRole('kasir');
         $this->productModel     = new Product();
         $this->transactionModel = new Transaction();
     }
@@ -77,7 +78,6 @@ class KasirTransactionController extends Controller
         // Simpan transaksi
         $this->transactionModel->create([
             'product_id'   => $productId,
-            'product_name' => $product['name'],
             'quantity'     => $quantity,
             'price'        => $product['price'],
             'total_price'  => $totalPrice,

@@ -128,6 +128,60 @@ function verifyCsrf(): void
 }
 
 // ============================================================
+// AUTHENTICATION HELPERS
+// ============================================================
+
+/**
+ * Cek apakah user sudah login
+ *
+ * @return bool
+ */
+function isAuthenticated(): bool
+{
+    return isset($_SESSION['user']);
+}
+
+/**
+ * Cek apakah user yang login memiliki role tertentu
+ *
+ * @param string $role 'admin' atau 'kasir'
+ * @return bool
+ */
+function isRole(string $role): bool
+{
+    return isAuthenticated() && ($_SESSION['user']['role'] ?? '') === $role;
+}
+
+/**
+ * Redirect ke halaman login jika belum autentikasi
+ */
+function requireAuth(): void
+{
+    if (!isAuthenticated()) {
+        flash('error', 'Silakan login terlebih dahulu.');
+        redirect('/login');
+    }
+}
+
+/**
+ * Redirect jika user tidak memiliki role yang sesuai
+ *
+ * @param string $role 'admin' atau 'kasir'
+ */
+function requireRole(string $role): void
+{
+    if (!isAuthenticated()) {
+        flash('error', 'Silakan login terlebih dahulu.');
+        redirect('/login');
+    }
+
+    if (!isRole($role)) {
+        http_response_code(403);
+        die('Anda tidak memiliki akses ke halaman ini.');
+    }
+}
+
+// ============================================================
 // FORMAT HELPERS
 // ============================================================
 

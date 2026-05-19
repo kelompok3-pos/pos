@@ -26,6 +26,7 @@ class AdminProductController extends Controller
 
     public function __construct()
     {
+        requireRole('admin');
         $this->productModel = new Product();
     }
 

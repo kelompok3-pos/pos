@@ -22,25 +22,34 @@ class Transaction
     }
 
     /**
-     * Ambil semua transaksi
+     * Ambil semua transaksi (di-join dengan tabel products)
      *
      * @return array
      */
     public function getAll(): array
     {
-        $stmt = $this->pdo->query("SELECT * FROM transactions ORDER BY id DESC");
+        $stmt = $this->pdo->query(
+            "SELECT t.*, p.name AS product_name
+             FROM transactions t
+             LEFT JOIN products p ON t.product_id = p.id
+             ORDER BY t.id DESC"
+        );
         return $stmt->fetchAll();
     }
 
     /**
-     * Ambil transaksi hari ini
+     * Ambil transaksi hari ini (di-join dengan tabel products)
      *
      * @return array
      */
     public function getToday(): array
     {
         $stmt = $this->pdo->prepare(
-            "SELECT * FROM transactions WHERE DATE(created_at) = CURDATE() ORDER BY id DESC"
+            "SELECT t.*, p.name AS product_name
+             FROM transactions t
+             LEFT JOIN products p ON t.product_id = p.id
+             WHERE DATE(t.created_at) = CURDATE()
+             ORDER BY t.id DESC"
         );
         $stmt->execute();
         return $stmt->fetchAll();
@@ -62,18 +71,17 @@ class Transaction
     /**
      * Simpan transaksi baru
      *
-     * @param array $data ['product_id', 'product_name', 'quantity', 'price', 'total_price']
+     * @param array $data ['product_id', 'quantity', 'price', 'total_price']
      * @return bool
      */
     public function create(array $data): bool
     {
         $stmt = $this->pdo->prepare(
-            "INSERT INTO transactions (product_id, product_name, quantity, price, total_price) 
-             VALUES (?, ?, ?, ?, ?)"
+            "INSERT INTO transactions (product_id, quantity, price, total_price) 
+             VALUES (?, ?, ?, ?)"
         );
         return $stmt->execute([
             $data['product_id'],
-            $data['product_name'],
             $data['quantity'],
             $data['price'],
             $data['total_price'],

@@ -28,32 +28,71 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/"><i class="bi bi-speedometer2"></i> Dashboard</a>
-                    </li>
+                <?php if (isAuthenticated()): ?>
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                        </li>
 
-                    <!-- Menu Admin -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-gear"></i> Admin
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/admin/product"><i class="bi bi-box-seam"></i> Kelola Produk</a></li>
-                        </ul>
-                    </li>
+                        <?php if (isRole('admin')): ?>
+                        <!-- Menu Admin -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-gear"></i> Admin
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/admin/product"><i class="bi bi-box-seam"></i> Kelola Produk</a></li>
+                            </ul>
+                        </li>
+                        <?php endif; ?>
 
-                    <!-- Menu Kasir -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-badge"></i> Kasir
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/kasir/product"><i class="bi bi-box-seam"></i> Lihat Produk</a></li>
-                            <li><a class="dropdown-item" href="/kasir/transaction"><i class="bi bi-cart-check"></i> Transaksi</a></li>
-                        </ul>
-                    </li>
-                </ul>
+                        <?php if (isRole('kasir')): ?>
+                        <!-- Menu Kasir -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-badge"></i> Kasir
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/kasir/product"><i class="bi bi-box-seam"></i> Lihat Produk</a></li>
+                                <li><a class="dropdown-item" href="/kasir/transaction"><i class="bi bi-cart-check"></i> Transaksi</a></li>
+                            </ul>
+                        </li>
+                        <?php endif; ?>
+                    </ul>
+
+                    <!-- User Info & Logout -->
+                    <ul class="navbar-nav">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle"></i>
+                                <span class="d-none d-lg-inline"><?= e($_SESSION['user']['email']) ?></span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <span class="dropdown-item-text text-muted small">
+                                        Role: <span class="badge bg-<?= isRole('admin') ? 'primary' : 'success' ?>">
+                                            <?= ucfirst($_SESSION['user']['role']) ?>
+                                        </span>
+                                    </span>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="/logout">
+                                        <i class="bi bi-box-arrow-right"></i> Logout
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                <?php else: ?>
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/login">
+                                <i class="bi bi-box-arrow-in-right"></i> Login
+                            </a>
+                        </li>
+                    </ul>
+                <?php endif; ?>
             </div>
         </div>
     </nav>

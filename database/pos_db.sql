@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS transactions (
 -- Data Sampel Users
 -- Password: admin123 (hashed with password_hash)
 INSERT INTO users (email, password, role) VALUES
-('admin@pos.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin'),
-('kasir@pos.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'kasir');
+('admin@pos.com', '$2y$10$uXyT468XOMe2NhglAnjCP.uJpJtbYUNeFDw8lmx.MXKU15gS94/Uu', 'admin'),
+('kasir@pos.com', '$2y$10$uXyT468XOMe2NhglAnjCP.uJpJtbYUNeFDw8lmx.MXKU15gS94/Uu', 'kasir');
 
 -- Data Sampel Produk
 INSERT INTO products (name, image, price, stock, description) VALUES

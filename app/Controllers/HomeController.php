@@ -15,6 +15,8 @@ class HomeController extends Controller
 {
     public function index(): void
     {
+        requireAuth();
+
         $productModel = new Product();
 
         // Hitung total produk dan total stok untuk dashboard

@@ -1,9 +1,4 @@
-<!-- ============================================================ -->
-<!-- KASIR: TRANSAKSI PENJUALAN -->
-<!-- ============================================================ -->
-
 <div class="row g-4">
-    <!-- Form Transaksi -->
     <div class="col-md-5">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-success text-white">

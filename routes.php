@@ -23,6 +23,13 @@ $routes = [
     '/'                          => ['HomeController',                  'index'],
 
     // ============================================================
+    // AUTH — Login & Logout
+    // ============================================================
+    '/login'                     => ['AuthController',                  'loginForm'],
+    '/login/authenticate'        => ['AuthController',                  'login'],
+    '/logout'                    => ['AuthController',                  'logout'],
+
+    // ============================================================
     // ADMIN — Kelola Produk (CRUD)
     // ============================================================
     '/admin/product'             => ['Admin/AdminProductController',    'index'],
