@@ -11,8 +11,8 @@
  * - Controller di subfolder: 'Admin/AdminProductController'
  *
  * Contoh menambah route baru:
- *   '/admin/category'        => ['Admin/AdminCategoryController', 'index'],
- *   '/admin/category/create' => ['Admin/AdminCategoryController', 'create'],
+ * '/admin/category'        => ['Admin/AdminCategoryController', 'index'],
+ * '/admin/category/create' => ['Admin/AdminCategoryController', 'create'],
  * =================================================================
  */
 
@@ -42,13 +42,13 @@ $routes = [
     // ============================================================
     // KASIR — Lihat Produk & Transaksi
     // ============================================================
-    '/kasir/product'                        => ['Kasir/KasirProductController',      'index'],
-    '/kasir/transaction'                   => ['Kasir/KasirTransactionController',   'index'],
-    '/kasir/transaction/add'               => ['Kasir/KasirTransactionController',   'add'],
-    '/kasir/transaction/remove'            => ['Kasir/KasirTransactionController',   'remove'],
-    '/kasir/transaction/clear'             => ['Kasir/KasirTransactionController',   'clear'],
-    '/kasir/transaction/checkout'          => ['Kasir/KasirTransactionController',   'checkout'],
-
+    '/kasir/dashboard'           => ['Kasir/KasirDashboardController',  'index'], // ◄ FIXED FINAL KELOMPOK
+    '/kasir/product'             => ['Kasir/KasirProductController',    'index'],
+    '/kasir/transaction'         => ['Kasir/KasirTransactionController', 'index'],
+    '/kasir/transaction/add'     => ['Kasir/KasirTransactionController', 'add'],
+    '/kasir/transaction/remove'  => ['Kasir/KasirTransactionController', 'remove'],
+    '/kasir/transaction/clear'   => ['Kasir/KasirTransactionController', 'clear'],
+    '/kasir/transaction/checkout'=> ['Kasir/KasirTransactionController', 'checkout'],
 
     // ============================================================
     // ADMIN — Kelola Users
@@ -57,5 +57,4 @@ $routes = [
     '/admin/user/create'         => ['Admin/AdminUserController',       'create'],
     '/admin/user/store'          => ['Admin/AdminUserController',       'store'],
     '/admin/user/delete'         => ['Admin/AdminUserController',       'delete'],
-
 ];
