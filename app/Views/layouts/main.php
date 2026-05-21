@@ -15,7 +15,7 @@
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/">
+            <a class="navbar-brand fw-bold" href="<?= url('/') ?>">
                 <i class="bi bi-shop"></i> <?= APP_NAME ?>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -25,7 +25,7 @@
                 <?php if (isAuthenticated()): ?>
                     <ul class="navbar-nav me-auto">
                         <li class="nav-item">
-                            <a class="nav-link" href="/"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                            <a class="nav-link" href="<?= url('/') ?>"><i class="bi bi-speedometer2"></i> Dashboard</a>
                         </li>
 
                         <?php if (isRole('admin')): ?>
@@ -34,8 +34,8 @@
                                 <i class="bi bi-person-gear"></i> Admin
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="/admin/product"><i class="bi bi-box-seam"></i> Kelola Produk</a></li>
-                                <li><a class="dropdown-item" href="/admin/user"><i class="bi bi-people"></i> Kelola User</a></li>
+                                <li><a class="dropdown-item" href="<?= url('/admin/product') ?>"><i class="bi bi-box-seam"></i> Kelola Produk</a></li>
+                                <li><a class="dropdown-item" href="<?= url('/admin/user') ?>"><i class="bi bi-people"></i> Kelola User</a></li>
                             </ul>
                         </li>
                         <?php endif; ?>
@@ -46,8 +46,8 @@
                                 <i class="bi bi-person-badge"></i> Kasir
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="/kasir/product"><i class="bi bi-box-seam"></i> Lihat Produk</a></li>
-                                <li><a class="dropdown-item" href="/kasir/transaction"><i class="bi bi-cart-check"></i> Transaksi</a></li>
+                                <li><a class="dropdown-item" href="<?= url('/kasir/product') ?>"><i class="bi bi-box-seam"></i> Lihat Produk</a></li>
+                                <li><a class="dropdown-item" href="<?= url('/kasir/transaction') ?>"><i class="bi bi-cart-check"></i> Transaksi</a></li>
                             </ul>
                         </li>
                         <?php endif; ?>
@@ -69,7 +69,7 @@
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <a class="dropdown-item text-danger" href="/logout">
+                                    <a class="dropdown-item text-danger" href="<?= url('/logout') ?>">
                                         <i class="bi bi-box-arrow-right"></i> Logout
                                     </a>
                                 </li>
@@ -79,7 +79,7 @@
                 <?php else: ?>
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
-                            <a class="nav-link" href="/login">
+                            <a class="nav-link" href="<?= url('/login') ?>">
                                 <i class="bi bi-box-arrow-in-right"></i> Login
                             </a>
                         </li>

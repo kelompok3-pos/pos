@@ -511,7 +511,8 @@ Semua fungsi ini tersedia secara global (di-load otomatis via `public/index.php`
 | Fungsi | Kegunaan | Contoh |
 |---|---|---|
 | `redirect($url)` | Redirect ke URL lain | `redirect('/admin/product')` |
-| `asset($path)` | Generate URL asset | `asset('css/style.css')` → `/assets/css/style.css` |
+| `url($path)` | Full URL utk href/action | `url('/login/authenticate')` → `http://localhost/pos/public/login/authenticate` |
+| `asset($path)` | Generate URL asset | `asset('css/style.css')` → `/pos/public/assets/css/style.css` |
 | `flash($key, $msg)` | Simpan flash message | `flash('success', 'Berhasil!')` |
 | `getFlash($key)` | Ambil flash message | `getFlash('success')` |
 | `old($key, $default)` | Ambil input sebelumnya | `old('name')` |

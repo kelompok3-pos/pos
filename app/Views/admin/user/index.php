@@ -9,7 +9,7 @@
         </h2>
         <p class="text-muted mb-0">Kelola akun administrator dan kasir aktif</p>
     </div>
-    <a href="/admin/user/create" class="btn btn-primary">
+    <a href="<?= url('/admin/user/create') ?>" class="btn btn-primary">
         <i class="bi bi-person-plus"></i> Tambah User
     </a>
 </div>
@@ -65,7 +65,7 @@
                                 <?= date('d M Y', strtotime($u['created_at'])) ?>
                             </td>
                             <td class="text-center">
-                                <a href="/admin/user/delete?id=<?= $u['id'] ?>"
+                                <a href="<?= url('/admin/user/delete') ?>?id=<?= $u['id'] ?>" 
                                    class="btn btn-sm btn-danger"
                                    onclick="return confirm('Nonaktifkan user <?= e($u['name']) ?>?')">
                                     <i class="bi bi-trash"></i>
