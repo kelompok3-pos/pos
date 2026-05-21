@@ -51,7 +51,7 @@ function env(string $key, mixed $default = null): mixed
 // ============================================================
 define('APP_NAME', env('APP_NAME', 'POS App'));
 define('APP_ENV', env('APP_ENV', 'local'));
-define('APP_URL', env('APP_URL', 'http://localhost:8080'));
+define('APP_URL', env('APP_URL', 'http://localhost'));
 define('BASE_PATH', dirname(__DIR__));
 
 // Start session
