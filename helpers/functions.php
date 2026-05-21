@@ -15,23 +15,60 @@
 
 /**
  * Redirect ke URL tertentu
+ * Selalu gunakan full URL (scheme://host/path) agar kompatibel
+ * dengan setup subfolder (XAMPP) maupun root (Docker)
  *
  * Contoh: redirect('/admin/product')
  */
 function redirect(string $url): void
 {
-    header("Location: {$url}");
+    $base = env('APP_URL', '');
+    $base = rtrim($base, '/');
+
+    if (str_starts_with($url, '/')) {
+        // Relative path — prepend APP_URL
+        $fullUrl = $base . $url;
+    } else {
+        $fullUrl = $url;
+    }
+
+    header("Location: {$fullUrl}");
     exit;
 }
 
 /**
  * Generate URL lengkap untuk asset (CSS, JS, gambar)
+ * Include base path dari .env agar kompatibel dengan subfolder
  *
- * Contoh: asset('css/style.css') → '/assets/css/style.css'
+ * Contoh: asset('css/style.css') → /POS/public/assets/css/style.css
  */
 function asset(string $path): string
 {
+    $base = rtrim(env('APP_URL', ''), '/');
+
+    if ($base) {
+        return $base . '/assets/' . ltrim($path, '/');
+    }
+
     return '/assets/' . ltrim($path, '/');
+}
+
+/**
+ * Base URL untuk internal links (navbar, redirect, form action)
+ * Mengembalikan APP_URL dari .env
+ *
+ * Contoh: base_url() → 'http://localhost/POS/public'
+ *         base_url('/admin/product') → 'http://localhost/POS/public/admin/product'
+ */
+function base_url(string $path = ''): string
+{
+    $base = rtrim(env('APP_URL', ''), '/');
+
+    if ($path === '') {
+        return $base;
+    }
+
+    return $base . '/' . ltrim($path, '/');
 }
 
 // ============================================================

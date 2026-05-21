@@ -21,9 +21,19 @@ require_once __DIR__ . '/../helpers/functions.php';
 // 2. Load daftar routes
 require_once __DIR__ . '/../routes.php';
 
-// 3. Ambil URL dari browser
+// 3. Ambil URL dari browser, lalu strip base path (subfolder) jika ada
 $url = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$url = rtrim($url, '/') ?: '/';   // Bersihkan trailing slash, default ke '/'
+$url = rtrim($url, '/') ?: '/';
+
+// Untuk XAMPP dengan subfolder (misal: /POS/public), hilangkan prefix subfolder
+// Ini agar routing tetap bersih: /POS/public/admin/product → /admin/product
+$scriptName = $_SERVER['SCRIPT_NAME'] ?? ''; // Contoh: /POS/public/index.php
+if (preg_match('#^(.+)/index\.php$#', $scriptName, $m)) {
+    $baseScript = rtrim($m[1], '/'); // Contoh: /POS/public
+    if ($baseScript !== '' && str_starts_with($url, $baseScript)) {
+        $url = '/' . ltrim(substr($url, strlen($baseScript)), '/') ?: '/';
+    }
+}
 
 // 4. Cari route yang cocok
 if (isset($routes[$url])) {
