@@ -21,7 +21,7 @@ try {
 }
 
 // Ambil semua user yang belum dihapus (soft delete)
-$stmt = $pdo->query("SELECT id, nama, email, role, created_at FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC");
+$stmt = $pdo->query("SELECT id, name, email, role, created_at FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC");
 $users = $stmt->fetchAll();
 
 $totalUser  = count($users);
@@ -218,7 +218,7 @@ $totalKasir = count(array_filter($users, fn($u) => $u['role'] === 'kasir'));
                     // Palet warna inisial avatar kontras tinggi
                     $colors = ['#10b981','#7c3aed','#0284c7','#059669','#ea580c','#dc2626','#db2777','#4d7c0f'];
                     foreach ($users as $index => $user):
-                        $initial = strtoupper(substr($user['nama'], 0, 1));
+                        $initial = strtoupper(substr($user['name'], 0, 1));
                         $color = $colors[$index % count($colors)];
                     ?>
                     <tr>
@@ -226,7 +226,7 @@ $totalKasir = count(array_filter($users, fn($u) => $u['role'] === 'kasir'));
                         <td>
                             <div class="d-flex align-items-center gap-3">
                                 <div class="avatar" style="background:<?= $color ?>; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"><?= $initial ?></div>
-                                <span style="font-weight:700; color: var(--text-main);"><?= htmlspecialchars($user['nama']) ?></span>
+                                <span style="font-weight:700; color: var(--text-main);"><?= htmlspecialchars($user['name']) ?></span>
                             </div>
                         </td>
                         <td style="color: var(--text-muted); font-weight: 700;"><?= htmlspecialchars($user['email']) ?></td>
@@ -251,7 +251,7 @@ $totalKasir = count(array_filter($users, fn($u) => $u['role'] === 'kasir'));
                                    class="btn btn-sm px-3 py-2"
                                    style="background:#fef2f2; color:#dc2626; border:1px solid #fca5a5; border-radius:8px; font-weight:700;"
                                    title="Hapus Akun"
-                                   onclick="return confirm('Apakah Anda yakin ingin menghapus user <?= htmlspecialchars($user['nama']) ?>?')">
+                                   onclick="return confirm('Apakah Anda yakin ingin menghapus user <?= htmlspecialchars($user['name']) ?>?')">
                                     <i class="bi bi-trash-fill"></i>
                                 </a>
                             </div>

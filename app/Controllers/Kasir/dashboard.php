@@ -4,8 +4,8 @@
 // Ramah pengguna dewasa, kontras tinggi, teks besar & jelas.
 // =========================================================================
 
-$host    = 'localhost';
-$dbname  = 'pos_db'; 
+$host     = 'localhost';
+$dbname   = 'pos_db';
 $username = 'root';
 $password = '';
 
@@ -19,26 +19,26 @@ try {
     die("Koneksi database gagal: " . $e->getMessage());
 }
 
-// ---- Total produk terjual ----
-$stmtProduk = $pdo->query("SELECT SUM(jumlah) AS total FROM detail_transaksi");
+// ---- Total items sold ----
+$stmtProduk = $pdo->query("SELECT SUM(quantity) AS total FROM transaction_items");
 $totalProdukTerjual = $stmtProduk->fetchColumn() ?? 0;
 
-// ---- Total penjualan (Omzet) ----
-$stmtPenjualan = $pdo->query("SELECT SUM(total_harga) AS total FROM transaksi");
+// ---- Total revenue ----
+$stmtPenjualan = $pdo->query("SELECT SUM(total_price) AS total FROM transactions");
 $totalPenjualan = $stmtPenjualan->fetchColumn() ?? 0;
 
-// ---- Total transaksi ----
-$stmtTrx = $pdo->query("SELECT COUNT(*) AS total FROM transaksi");
+// ---- Total transactions ----
+$stmtTrx = $pdo->query("SELECT COUNT(*) AS total FROM transactions");
 $totalTransaksi = $stmtTrx->fetchColumn() ?? 0;
 
-// ---- Grafik penjualan 6 bulan terakhir ----
+// ---- Sales chart for last 6 months ----
 $stmtGrafik = $pdo->query("
     SELECT
         DATE_FORMAT(created_at, '%b %Y') AS bulan_label,
         DATE_FORMAT(created_at, '%Y-%m') AS bulan_sort,
-        SUM(total_harga) AS total,
+        SUM(total_price) AS total,
         COUNT(*) AS jumlah_transaksi
-    FROM transaksi
+    FROM transactions
     WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
     GROUP BY bulan_sort, bulan_label
     ORDER BY bulan_sort ASC
@@ -49,21 +49,21 @@ $grafikLabel  = json_encode(array_column($grafikData, 'bulan_label'));
 $grafikTotal  = json_encode(array_map('floatval', array_column($grafikData, 'total')));
 $grafikJumlah = json_encode(array_map('intval', array_column($grafikData, 'jumlah_transaksi')));
 
-// ---- 5 Transaksi terbaru ----
+// ---- 5 Recent transactions ----
 $stmtRecent = $pdo->query("
-    SELECT t.kode_transaksi, t.total_harga, t.created_at, u.nama AS kasir
-    FROM transaksi t
-    JOIN users u ON t.id_kasir = u.id
+    SELECT t.transaction_code, t.total_price, t.created_at, u.name AS cashier
+    FROM transactions t
+    JOIN users u ON t.cashier_id = u.id
     ORDER BY t.created_at DESC
     LIMIT 5
 ");
 $recentTrx = $stmtRecent->fetchAll();
 
-// ---- 5 Produk terlaris ----
+// ---- 5 Top selling products ----
 $stmtTop = $pdo->query("
-    SELECT nama_produk, SUM(jumlah) AS total_terjual, SUM(subtotal) AS total_omzet
-    FROM detail_transaksi
-    GROUP BY nama_produk
+    SELECT product_name, SUM(quantity) AS total_terjual, SUM(subtotal) AS total_omzet
+    FROM transaction_items
+    GROUP BY product_name
     ORDER BY total_terjual DESC
     LIMIT 5
 ");
@@ -85,26 +85,25 @@ function formatRupiah($angka) {
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        :root { 
-            --bg-main: #f8fafc; /* Abu-abu sangat muda bersih */
-            --bg-card: #ffffff; /* Putih murni kontras */
-            --primary-green: #059669; /* Hijau Zamrud Tegas */
-            --primary-dark: #064e3b; /* Hijau Tua untuk Teks Utama */
-            --text-main: #0f172a; /* Hitam pekat agar tulisan jelas */
-            --text-muted: #475569; /* Abu-abu gelap untuk sub-teks */
-            --sidebar-bg: #064e3b; /* Samping Hijau Tua Elegan */
+        :root {
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --primary-green: #059669;
+            --primary-dark: #064e3b;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --sidebar-bg: #064e3b;
         }
 
         * { box-sizing: border-box; }
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg-main); 
-            color: var(--text-main); 
-            margin: 0; 
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
             -webkit-font-smoothing: antialiased;
         }
 
-        /* ---- SIDEBAR CLEAN ---- */
         .sidebar { width: 260px; min-height: 100vh; background: var(--sidebar-bg); position: fixed; top: 0; left: 0; display: flex; flex-direction: column; z-index: 100; box-shadow: 4px 0 15px rgba(0,0,0,0.05); }
         .sidebar-brand { padding: 32px 24px 20px; color: #fff; font-weight: 800; font-size: 1.4rem; letter-spacing: -0.5px; border-bottom: 1px solid rgba(255,255,255,0.08); }
         .sidebar-brand span { color: #34d399; font-weight: 900; }
@@ -115,7 +114,6 @@ function formatRupiah($angka) {
         .sidebar-nav a.active { background: #34d399; color: #064e3b; font-weight: 700; box-shadow: 0 4px 12px rgba(52, 211, 153, 0.2); }
         .sidebar-nav a i { font-size: 1.1rem; }
 
-        /* ---- MAIN CONTENT ---- */
         .main-content { margin-left: 260px; padding: 40px 48px; min-height: 100vh; }
         .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 36px; }
         .topbar h1 { font-size: 1.9rem; font-weight: 800; color: var(--primary-dark); letter-spacing: -0.5px; margin: 0; }
@@ -123,27 +121,23 @@ function formatRupiah($angka) {
         .date-badge { background: var(--bg-card); border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px 20px; font-size: 0.95rem; color: var(--text-main); font-weight: 700; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .date-badge i { color: var(--primary-green); font-size: 1.05rem; }
 
-        /* ---- HIGH CONTRAST CARDS ---- */
         .stat-card { background: var(--bg-card); border-radius: 20px; padding: 28px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); transition: transform 0.2s, box-shadow 0.2s; }
         .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08); border-color: var(--primary-green); }
         .stat-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 18px; }
         .stat-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
         .stat-value { font-size: 2rem; font-weight: 800; color: var(--primary-dark); }
 
-        /* ---- CARD BOX ---- */
         .card-box { background: var(--bg-card); border-radius: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; }
         .card-box-header { padding: 24px 28px; border-bottom: 1px solid #edf2f7; display: flex; align-items: center; justify-content: space-between; background: #fafafa; }
         .card-box-header h5 { font-weight: 800; font-size: 1.1rem; color: var(--primary-dark); margin: 0; display: flex; align-items: center; gap: 10px; }
         .card-box-body { padding: 28px; }
 
-        /* ---- HIGH CONTRAST TABLES (MUDAH DIBACA) ---- */
         .table { margin: 0; }
         .table thead th { background: #f1f5f9; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--primary-dark); padding: 16px 20px; border-bottom: 2px solid #cbd5e1; letter-spacing: 0.5px; }
         .table tbody td { padding: 18px 20px; font-size: 0.95rem; color: var(--text-main); font-weight: 600; vertical-align: middle; border-bottom: 1px solid #e2e8f0; }
         .table tbody tr:hover { background-color: #f8fafc; }
         .badge-success { background: #d1fae5; color: #065f46; padding: 6px 14px; border-radius: 10px; font-size: 0.8rem; font-weight: 700; border: 1px solid #a7f3d0; }
 
-        /* ---- LEADERBOARD PRODUK TERLARIS ---- */
         .produk-item { display: flex; align-items: center; gap: 16px; padding: 16px 0; border-bottom: 1px solid #edf2f7; }
         .produk-item:last-child { border-bottom: none; }
         .produk-rank { width: 34px; height: 34px; border-radius: 10px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 800; color: var(--text-muted); }
@@ -224,7 +218,7 @@ function formatRupiah($angka) {
                     <div class="produk-item">
                         <div class="produk-rank <?= $rankClass[$idx] ?? '' ?>"><?= $idx+1 ?></div>
                         <div class="produk-bar-wrap">
-                            <div class="produk-name"><?= htmlspecialchars($prod['nama_produk']) ?></div>
+                            <div class="produk-name"><?= htmlspecialchars($prod['product_name']) ?></div>
                             <div class="produk-bar"><div class="produk-bar-fill" style="width:<?= $pct ?>%;"></div></div>
                         </div>
                         <div class="produk-count"><?= $prod['total_terjual'] ?> <span style="font-size: 0.8rem; color: var(--text-muted);">Pcs</span></div>
@@ -245,9 +239,9 @@ function formatRupiah($angka) {
                 <tbody>
                     <?php foreach ($recentTrx as $trx): ?>
                     <tr>
-                        <td><span style="font-family:monospace; background: #f1f5f9; padding: 6px 12px; border-radius: 8px; color: var(--primary-dark); font-weight: 700; border: 1px solid #cbd5e1;"><?= htmlspecialchars($trx['kode_transaksi']) ?></span></td>
-                        <td style="font-weight: 700; color: var(--text-main);"><?= htmlspecialchars($trx['kasir']) ?></td>
-                        <td style="font-weight: 800; color: #047857;"><?= formatRupiah($trx['total_harga']) ?></td>
+                        <td><span style="font-family:monospace; background: #f1f5f9; padding: 6px 12px; border-radius: 8px; color: var(--primary-dark); font-weight: 700; border: 1px solid #cbd5e1;"><?= htmlspecialchars($trx['transaction_code']) ?></span></td>
+                        <td style="font-weight: 700; color: var(--text-main);"><?= htmlspecialchars($trx['cashier']) ?></td>
+                        <td style="font-weight: 800; color: #047857;"><?= formatRupiah($trx['total_price']) ?></td>
                         <td style="color: var(--text-muted); font-weight: 700;"><?= date('d M Y • H:i', strtotime($trx['created_at'])) ?></td>
                         <td><span class="badge-success">Selesai</span></td>
                     </tr>
@@ -266,23 +260,23 @@ new Chart(ctx, {
     data: {
         labels: <?= $grafikLabel ?>,
         datasets: [
-            { 
-                label: 'Omzet (Rp)', 
-                data: <?= $grafikTotal ?>, 
-                backgroundColor: '#059669', /* Hijau Solid kontras tinggi */
+            {
+                label: 'Omzet (Rp)',
+                data: <?= $grafikTotal ?>,
+                backgroundColor: '#059669',
                 borderRadius: 6,
-                yAxisID: 'y' 
+                yAxisID: 'y'
             },
-            { 
-                label: 'Jumlah Transaksi', 
-                data: <?= $grafikJumlah ?>, 
-                type: 'line', 
-                borderColor: '#2563eb', /* Biru kontras jernih untuk garis */
+            {
+                label: 'Jumlah Transaksi',
+                data: <?= $grafikJumlah ?>,
+                type: 'line',
+                borderColor: '#2563eb',
                 borderWidth: 4,
                 pointBackgroundColor: '#2563eb',
                 pointRadius: 6,
-                yAxisID: 'y2', 
-                tension: 0.2 
+                yAxisID: 'y2',
+                tension: 0.2
             }
         ]
     },

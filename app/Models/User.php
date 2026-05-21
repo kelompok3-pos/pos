@@ -29,7 +29,7 @@ class User
      */
     public function getAll(): array
     {
-        $stmt = $this->pdo->query("SELECT id, email, role, created_at, updated_at FROM users WHERE deleted_at IS NULL ORDER BY id DESC");
+        $stmt = $this->pdo->query("SELECT id, name, email, role, created_at, updated_at FROM users WHERE deleted_at IS NULL ORDER BY id DESC");
         return $stmt->fetchAll();
     }
 
@@ -41,7 +41,7 @@ class User
      */
     public function getById(int $id): array|false
     {
-        $stmt = $this->pdo->prepare("SELECT id, email, role, created_at, updated_at FROM users WHERE id = ? AND deleted_at IS NULL");
+        $stmt = $this->pdo->prepare("SELECT id, name, email, role, created_at, updated_at FROM users WHERE id = ? AND deleted_at IS NULL");
         $stmt->execute([$id]);
         return $stmt->fetch();
     }
@@ -62,15 +62,16 @@ class User
     /**
      * Buat user baru (register)
      *
-     * @param array $data ['email', 'password', 'role']
+     * @param array $data ['name', 'email', 'password', 'role']
      * @return bool
      */
     public function create(array $data): bool
     {
         $stmt = $this->pdo->prepare(
-            "INSERT INTO users (email, password, role) VALUES (?, ?, ?)"
+            "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)"
         );
         return $stmt->execute([
+            $data['name'],
             $data['email'],
             password_hash($data['password'], PASSWORD_DEFAULT),
             $data['role'] ?? 'kasir',

@@ -48,22 +48,14 @@ $routes = [
     '/kasir/transaction/remove'            => ['Kasir/KasirTransactionController',   'remove'],
     '/kasir/transaction/clear'             => ['Kasir/KasirTransactionController',   'clear'],
     '/kasir/transaction/checkout'          => ['Kasir/KasirTransactionController',   'checkout'],
-];
 
-// ============================================================
-    // ADMIN — Kelola Produk (CRUD)
-    // ============================================================
-    '/admin/product'             => ['Admin/AdminProductController',    'index'],
-    '/admin/product/create'      => ['Admin/AdminProductController',    'create'],
-    '/admin/product/store'       => ['Admin/AdminProductController',    'store'],
-    '/admin/product/edit'        => ['Admin/AdminProductController',    'edit'],
-    '/admin/product/update'      => ['Admin/AdminProductController',    'update'],
-    '/admin/product/delete'      => ['Admin/AdminProductController',    'delete'],
 
     // ============================================================
-    // ADMIN — Kelola Users (Tugas: Moses)
+    // ADMIN — Kelola Users
     // ============================================================
     '/admin/user'                => ['Admin/AdminUserController',       'index'],
     '/admin/user/create'         => ['Admin/AdminUserController',       'create'],
     '/admin/user/store'          => ['Admin/AdminUserController',       'store'],
     '/admin/user/delete'         => ['Admin/AdminUserController',       'delete'],
+
+];

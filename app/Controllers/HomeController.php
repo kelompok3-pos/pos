@@ -23,22 +23,28 @@ class HomeController extends Controller
         $transactionModel = new Transaction();
         $userModel        = new User();
 
-        // Tarik data ringkasan statistik dari model-model terkait
         $totalProducts = $productModel->count();
         $totalStock    = $productModel->totalStock();
         $todayRevenue  = $transactionModel->todayRevenue();
         $todaySales    = $transactionModel->todayCount();
         $totalUsers    = $userModel->count();
-        $recentTrx     = $transactionModel->getToday(); // Ambil transaksi hari ini
+
+        // Ambil transaksi header hari ini + detail-nya
+        $todayHeaders = $transactionModel->getToday();
+        $todayDetails = [];
+        foreach ($todayHeaders as $trx) {
+            $todayDetails[$trx['id']] = $transactionModel->getDetails($trx['id']);
+        }
 
         $this->view('home/index', [
-            'title'         => 'Dashboard Analisis',
+            'title'        => 'Dashboard',
             'totalProducts' => $totalProducts,
             'totalStock'    => $totalStock,
             'todayRevenue'  => $todayRevenue,
             'todaySales'    => $todaySales,
             'totalUsers'    => $totalUsers,
-            'recentTrx'     => $recentTrx
+            'todayHeaders'  => $todayHeaders,
+            'todayDetails'  => $todayDetails,
         ]);
     }
 }

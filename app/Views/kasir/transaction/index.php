@@ -195,10 +195,10 @@ $transactionDetails  ??= [];
                             <tbody>
                                 <?php foreach ($transactions as $trx): ?>
                                     <tr>
-                                        <td><code class="small"><?= e($trx['kode_transaksi']) ?></code></td>
-                                        <td><?= e($trx['kasir_name'] ?? '-') ?></td>
+                                        <td><code class="small"><?= e($trx['transaction_code']) ?></code></td>
+                                        <td><?= e($trx['cashier_name'] ?? '-') ?></td>
                                         <td class="text-end fw-bold text-success">
-                                            <?= formatRupiah($trx['total_harga']) ?>
+                                            <?= formatRupiah($trx['total_price']) ?>
                                         </td>
                                         <td class="text-center text-muted small">
                                             <?= date('H:i', strtotime($trx['created_at'])) ?>
@@ -221,9 +221,9 @@ $transactionDetails  ??= [];
                                             <ul class="mb-0 mt-1">
                                                 <?php foreach ($details as $detail): ?>
                                                     <li>
-                                                        <?= e($detail['nama_produk']) ?> —
-                                                        <?= $detail['jumlah'] ?>x @
-                                                        <?= formatRupiah($detail['subtotal'] / $detail['jumlah']) ?>
+                                                        <?= e($detail['product_name']) ?> —
+                                                        <?= $detail['quantity'] ?>x @
+                                                        <?= formatRupiah($detail['subtotal'] / $detail['quantity']) ?>
                                                         = <strong><?= formatRupiah($detail['subtotal']) ?></strong>
                                                     </li>
                                                 <?php endforeach; ?>

@@ -35,6 +35,49 @@ class AdminUserController extends Controller
     }
 
     /**
+     * Tampilkan form tambah user baru
+     */
+    public function create(): void
+    {
+        $this->view('admin/user/create', [
+            'title' => 'Tambah User Baru',
+        ]);
+    }
+
+    /**
+     * Simpan data user baru ke database
+     */
+    public function store(): void
+    {
+        verifyCsrf();
+
+        $name     = $_POST['name'] ?? '';
+        $email    = $_POST['email'] ?? '';
+        $password = $_POST['password'] ?? '';
+        $role     = $_POST['role'] ?? 'kasir';
+
+        if (empty($name) || empty($email) || empty($password)) {
+            flash('error', 'Semua field wajib diisi.');
+            $this->redirect('/admin/user/create');
+        }
+
+        $created = $this->userModel->create([
+            'name'     => $name,
+            'email'    => $email,
+            'password' => $password,
+            'role'     => $role,
+        ]);
+
+        if ($created) {
+            flash('success', 'User baru berhasil ditambahkan!');
+            $this->redirect('/admin/user');
+        } else {
+            flash('error', 'Email sudah terdaftar. Gunakan email lain.');
+            $this->redirect('/admin/user/create');
+        }
+    }
+
+    /**
      * Fitur hapus user (Soft Delete)
      */
     public function delete(): void
@@ -46,33 +89,9 @@ class AdminUserController extends Controller
             $this->redirect('/admin/user');
         }
 
-        $this->userModel->delete((int)$id);
+        $this->userModel->delete((int) $id);
 
         flash('success', 'Akun user berhasil dinonaktifkan!');
         $this->redirect('/admin/user');
     }
 }
-
-/**
-     * Tampilkan form tambah user baru
-     */
-    public function create(): void
-    {
-        $this->view('admin/user/create', [
-            'title' => 'Tambah User Baru'
-        ]);
-    }
-
-    /**
-     * Simpan data user baru ke database
-     */
-    public function store(): void
-    {
-        verifyCsrf();
-
-        // Panggil model user untuk create data
-        // $this->userModel->create([...]);
-
-        flash('success', 'User baru berhasil ditambahkan!');
-        $this->redirect('/admin/user');
-    }

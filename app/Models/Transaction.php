@@ -4,10 +4,9 @@
  * =================================================================
  * MODEL: TRANSACTION
  * =================================================================
- * Class untuk mengakses tabel `transaksi` dan `detail_transaksi`
- * di database.
+ * Class to access `transactions` and `transaction_items` tables.
  *
- * Cara pakai:
+ * Usage:
  *   $transaction = new Transaction();
  *   $today = $transaction->getToday();
  * =================================================================
@@ -23,32 +22,32 @@ class Transaction
     }
 
     /**
-     * Ambil semua header transaksi (di-join dengan users sebagai kasir)
+     * Get all transaction headers (joined with users as cashier)
      *
      * @return array
      */
     public function getAll(): array
     {
         $stmt = $this->pdo->query(
-            "SELECT t.*, u.nama AS kasir_name
-             FROM transaksi t
-             LEFT JOIN users u ON t.id_kasir = u.id
+            "SELECT t.*, u.name AS cashier_name
+             FROM transactions t
+             LEFT JOIN users u ON t.cashier_id = u.id
              ORDER BY t.id DESC"
         );
         return $stmt->fetchAll();
     }
 
     /**
-     * Ambil transaksi hari ini
+     * Get today's transactions
      *
      * @return array
      */
     public function getToday(): array
     {
         $stmt = $this->pdo->prepare(
-            "SELECT t.*, u.nama AS kasir_name
-             FROM transaksi t
-             LEFT JOIN users u ON t.id_kasir = u.id
+            "SELECT t.*, u.name AS cashier_name
+             FROM transactions t
+             LEFT JOIN users u ON t.cashier_id = u.id
              WHERE DATE(t.created_at) = CURDATE()
              ORDER BY t.id DESC"
         );
@@ -57,7 +56,7 @@ class Transaction
     }
 
     /**
-     * Ambil 1 transaksi berdasarkan ID
+     * Get a single transaction by ID
      *
      * @param int $id
      * @return array|false
@@ -65,9 +64,9 @@ class Transaction
     public function getById(int $id): array|false
     {
         $stmt = $this->pdo->prepare(
-            "SELECT t.*, u.nama AS kasir_name
-             FROM transaksi t
-             LEFT JOIN users u ON t.id_kasir = u.id
+            "SELECT t.*, u.name AS cashier_name
+             FROM transactions t
+             LEFT JOIN users u ON t.cashier_id = u.id
              WHERE t.id = ?"
         );
         $stmt->execute([$id]);
@@ -75,7 +74,7 @@ class Transaction
     }
 
     /**
-     * Ambil detail transaksi berdasarkan ID header
+     * Get transaction items by transaction header ID
      *
      * @param int $transactionId
      * @return array
@@ -83,47 +82,47 @@ class Transaction
     public function getDetails(int $transactionId): array
     {
         $stmt = $this->pdo->prepare(
-            "SELECT * FROM detail_transaksi WHERE id_transaksi = ?"
+            "SELECT * FROM transaction_items WHERE transaction_id = ?"
         );
         $stmt->execute([$transactionId]);
         return $stmt->fetchAll();
     }
 
     /**
-     * Simpan transaksi baru (header + detail dalam 1 method)
+     * Save new transaction (header + items in one method)
      *
-     * @param int   $kasirId    ID kasir dari session
-     * @param array $items      [['product_id' => 1, 'name' => 'Kopi', 'price' => 25000, 'quantity' => 2, 'subtotal' => 50000], ...]
+     * @param int   $cashierId   Cashier ID from session
+     * @param array $items       [['name' => 'Kopi', 'price' => 25000, 'quantity' => 2, 'subtotal' => 50000], ...]
      * @return bool
      */
-    public function create(int $kasirId, array $items): bool
+    public function create(int $cashierId, array $items): bool
     {
         if (empty($items)) {
             return false;
         }
 
-        // Hitung total harga
+        // Calculate total price
         $totalPrice = array_reduce($items, fn($sum, $item) => $sum + $item['subtotal'], 0);
 
-        // Generate kode transaksi: TRX-YYYYMM-NNN
-        $kode = $this->generateTransactionCode();
+        // Generate transaction code: TRX-YYYYMM-NNN
+        $code = $this->generateTransactionCode();
 
         try {
             $this->pdo->beginTransaction();
 
-            // Insert header transaksi
+            // Insert transaction header
             $stmt = $this->pdo->prepare(
-                "INSERT INTO transaksi (kode_transaksi, id_kasir, total_harga) VALUES (?, ?, ?)"
+                "INSERT INTO transactions (transaction_code, cashier_id, total_price) VALUES (?, ?, ?)"
             );
-            $stmt->execute([$kode, $kasirId, $totalPrice]);
+            $stmt->execute([$code, $cashierId, $totalPrice]);
             $transactionId = (int) $this->pdo->lastInsertId();
 
-            // Insert detail transaksi
-            $stmtDetail = $this->pdo->prepare(
-                "INSERT INTO detail_transaksi (id_transaksi, nama_produk, jumlah, subtotal) VALUES (?, ?, ?, ?)"
+            // Insert transaction items
+            $stmtItem = $this->pdo->prepare(
+                "INSERT INTO transaction_items (transaction_id, product_name, quantity, subtotal) VALUES (?, ?, ?, ?)"
             );
             foreach ($items as $item) {
-                $stmtDetail->execute([
+                $stmtItem->execute([
                     $transactionId,
                     $item['name'],
                     $item['quantity'],
@@ -140,7 +139,7 @@ class Transaction
     }
 
     /**
-     * Generate kode transaksi unik: TRX-YYYYMM-NNN
+     * Generate unique transaction code: TRX-YYYYMM-NNN
      *
      * @return string
      */
@@ -148,12 +147,12 @@ class Transaction
     {
         $prefix = date('Ym');
         $stmt = $this->pdo->prepare(
-            "SELECT kode_transaksi FROM transaksi WHERE kode_transaksi LIKE ? ORDER BY id DESC LIMIT 1"
+            "SELECT transaction_code FROM transactions WHERE transaction_code LIKE ? ORDER BY id DESC LIMIT 1"
         );
         $stmt->execute(["TRX-{$prefix}-%"]);
         $last = $stmt->fetch();
 
-        if ($last && preg_match('/TRX-\d+-(\d+)/', $last['kode_transaksi'], $m)) {
+        if ($last && preg_match('/TRX-\d+-(\d+)/', $last['transaction_code'], $m)) {
             $next = (int) $m[1] + 1;
         } else {
             $next = 1;
@@ -163,44 +162,44 @@ class Transaction
     }
 
     /**
-     * Hitung total pendapatan hari ini
+     * Calculate today's total revenue
      *
      * @return float
      */
     public function todayRevenue(): float
     {
         $stmt = $this->pdo->prepare(
-            "SELECT COALESCE(SUM(total_harga), 0) FROM transaksi WHERE DATE(created_at) = CURDATE()"
+            "SELECT COALESCE(SUM(total_price), 0) FROM transactions WHERE DATE(created_at) = CURDATE()"
         );
         $stmt->execute();
         return (float) $stmt->fetchColumn();
     }
 
     /**
-     * Hitung jumlah transaksi hari ini
+     * Count today's transactions
      *
      * @return int
      */
     public function todayCount(): int
     {
         $stmt = $this->pdo->prepare(
-            "SELECT COUNT(*) FROM transaksi WHERE DATE(created_at) = CURDATE()"
+            "SELECT COUNT(*) FROM transactions WHERE DATE(created_at) = CURDATE()"
         );
         $stmt->execute();
         return (int) $stmt->fetchColumn();
     }
 
     /**
-     * Hitung total item terjual hari ini
+     * Count total items sold today
      *
      * @return int
      */
     public function todayItemsSold(): int
     {
         $stmt = $this->pdo->prepare(
-            "SELECT COALESCE(SUM(dt.jumlah), 0)
-             FROM detail_transaksi dt
-             INNER JOIN transaksi t ON dt.id_transaksi = t.id
+            "SELECT COALESCE(SUM(ti.quantity), 0)
+             FROM transaction_items ti
+             INNER JOIN transactions t ON ti.transaction_id = t.id
              WHERE DATE(t.created_at) = CURDATE()"
         );
         $stmt->execute();
