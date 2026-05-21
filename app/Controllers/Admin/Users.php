@@ -65,7 +65,7 @@ $totalKasir = count(array_filter($users, fn($u) => $u['role'] === 'kasir'));
         .sidebar-nav { padding: 20px 16px; flex: 1; }
         .nav-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #a7f3d0; letter-spacing: 1.5px; padding: 8px 12px; margin-bottom: 6px; }
         .sidebar-nav a { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; color: #d1fae5; text-decoration: none; font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; transition: all 0.2s; }
-        .sidebar-nav a:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .sidebar-nav a:hover { background: rgba(255,255,255,0.08); color: #fff; transform: translateX(4px); }
         .sidebar-nav a.active { background: #34d399; color: #064e3b; font-weight: 700; box-shadow: 0 4px 12px rgba(52, 211, 153, 0.2); }
         .sidebar-nav a i { font-size: 1.1rem; }
 
@@ -122,14 +122,14 @@ $totalKasir = count(array_filter($users, fn($u) => $u['role'] === 'kasir'));
         <a href="dashboard.php"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
 
         <div class="nav-label">Produk</div>
-        <a href="#"><i class="bi bi-box-seam-fill"></i> List Produk</a>
+        <a href="produk.php"><i class="bi bi-box-seam-fill"></i> List Produk</a>
 
         <div class="nav-label">Users</div>
         <a href="users.php" class="active"><i class="bi bi-people-fill"></i> List User</a>
         <a href="tambah_user.php"><i class="bi bi-person-plus-fill"></i> Tambah User</a>
 
         <div class="nav-label">Transaksi</div>
-        <a href="#"><i class="bi bi-receipt-cutoff"></i> Daftar Transaksi</a>
+        <a href="transaksi.php"><i class="bi bi-receipt-cutoff"></i> Daftar Transaksi</a>
         <a href="#"><i class="bi bi-file-earmark-bar-graph-fill"></i> Laporan</a>
     </nav>
 </aside>

@@ -6,19 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($title ?? 'POS App') ?> — <?= APP_NAME ?></title>
 
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <!-- Custom CSS -->
     <link href="<?= asset('css/style.css') ?>" rel="stylesheet">
 </head>
 
 <body>
 
-    <!-- ============================================================ -->
-    <!-- NAVBAR -->
-    <!-- ============================================================ -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand fw-bold" href="/">
@@ -35,19 +29,18 @@
                         </li>
 
                         <?php if (isRole('admin')): ?>
-                        <!-- Menu Admin -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-person-gear"></i> Admin
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="/admin/product"><i class="bi bi-box-seam"></i> Kelola Produk</a></li>
+                                <li><a class="dropdown-item" href="/admin/user"><i class="bi bi-people"></i> Kelola User</a></li>
                             </ul>
                         </li>
                         <?php endif; ?>
 
                         <?php if (isRole('kasir')): ?>
-                        <!-- Menu Kasir -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-person-badge"></i> Kasir
@@ -60,7 +53,6 @@
                         <?php endif; ?>
                     </ul>
 
-                    <!-- User Info & Logout -->
                     <ul class="navbar-nav">
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
@@ -97,9 +89,6 @@
         </div>
     </nav>
 
-    <!-- ============================================================ -->
-    <!-- FLASH MESSAGES -->
-    <!-- ============================================================ -->
     <div class="container mt-3">
         <?php if ($successMsg = getFlash('success')): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -116,9 +105,6 @@
         <?php endif; ?>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- KONTEN HALAMAN (View masuk di sini) -->
-    <!-- ============================================================ -->
     <main class="container my-4">
         <?php
         if (isset($content) && file_exists($content)) {
@@ -127,18 +113,13 @@
         ?>
     </main>
 
-    <!-- ============================================================ -->
-    <!-- FOOTER -->
-    <!-- ============================================================ -->
     <footer class="bg-dark text-light py-3 mt-5">
         <div class="container text-center">
             <small>&copy; <?= date('Y') ?> <?= APP_NAME ?>. Kelompok 3</small>
         </div>
     </footer>
 
-    <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Custom JS -->
     <script src="<?= asset('js/script.js') ?>"></script>
 </body>
 
