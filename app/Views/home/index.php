@@ -10,6 +10,8 @@ $todaySales    ??= 0;
 $totalUsers    ??= 0;
 $todayHeaders   ??= [];
 $todayDetails   ??= [];
+$todayItemsSold ??= 0;
+$monthlyRevenue ??= [];
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -91,6 +93,25 @@ $todayDetails   ??= [];
             </div>
         </div>
     </div>
+
+<!-- zain produk terjual hari ini -->
+    <div class="col-md-3"> 
+        <div class="card border-0 shadow-sm bg-white h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="p-3 rounded bg-danger bg-opacity-10 text-danger fs-3">
+                    <i class="bi bi-bag-check"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-bold text-uppercase">Produk Terjual Hari Ini</div>
+                    <div class="fs-4 fw-bold text-dark">
+                        <?= number_format($todayItemsSold, 0, ',', '.') ?>
+                        <span class="fs-6 text-muted fw-normal">Item</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- Quick Actions -->
@@ -113,6 +134,61 @@ $todayDetails   ??= [];
         </div>
     </div>
 </div>
+
+<!-- zain -->
+
+<!-- Grafik Penjualan Bulanan -->
+<div class="card border-0 shadow-sm bg-white mb-4">
+    <div class="card-header bg-light py-3 border-0">
+        <h5 class="mb-0 fw-bold text-dark">
+            <i class="bi bi-bar-chart-line text-primary me-1"></i>
+            Penjualan Bulanan (6 Bulan Terakhir)
+        </h5>
+    </div>
+    <div class="card-body">
+        <canvas id="monthlyChart" height="100"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const labels = <?= json_encode(array_column($monthlyRevenue, 'label')) ?>;
+    const data   = <?= json_encode(array_map('floatval', array_column($monthlyRevenue, 'total'))) ?>;
+
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Pendapatan (Rp)',
+                data: data,
+                backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                borderColor: 'rgba(13, 110, 253, 1)',
+                borderWidth: 2,
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => 'Rp ' + ctx.raw.toLocaleString('id-ID')
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (val) => 'Rp ' + val.toLocaleString('id-ID')
+                    }
+                }
+            }
+        }
+    });
+</script>
 
 <!-- Transaksi Hari Ini -->
 <div class="card border-0 shadow-sm bg-white">
@@ -170,3 +246,4 @@ $todayDetails   ??= [];
         </table>
     </div>
 </div>
+

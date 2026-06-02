@@ -23,13 +23,16 @@ class HomeController extends Controller
         $transactionModel = new Transaction();
         $userModel        = new User();
 
-        $totalProducts = $productModel->count();
-        $totalStock    = $productModel->totalStock();
-        $todayRevenue  = $transactionModel->todayRevenue();
-        $todaySales    = $transactionModel->todayCount();
-        $totalUsers    = $userModel->count();
+        $totalProducts  = $productModel->count();
+        $totalStock     = $productModel->totalStock();
+        $todayRevenue   = $transactionModel->todayRevenue();
+        $todaySales     = $transactionModel->todayCount();
+        $totalUsers     = $userModel->count();
+        $todayItemsSold = $transactionModel->todayItemsSold(); // zain
+        $monthlyRevenue = $transactionModel->monthlyRevenue(); // zain
 
-        // Ambil transaksi header hari ini + detail-nya
+
+        //yransaksi header dan detail untuk transaksi hari ini
         $todayHeaders = $transactionModel->getToday();
         $todayDetails = [];
         foreach ($todayHeaders as $trx) {
@@ -37,14 +40,16 @@ class HomeController extends Controller
         }
 
         $this->view('home/index', [
-            'title'        => 'Dashboard',
-            'totalProducts' => $totalProducts,
-            'totalStock'    => $totalStock,
-            'todayRevenue'  => $todayRevenue,
-            'todaySales'    => $todaySales,
-            'totalUsers'    => $totalUsers,
-            'todayHeaders'  => $todayHeaders,
-            'todayDetails'  => $todayDetails,
+            'title'          => 'Dashboard',
+            'totalProducts'  => $totalProducts,
+            'totalStock'     => $totalStock,
+            'todayRevenue'   => $todayRevenue,
+            'todaySales'     => $todaySales,
+            'totalUsers'     => $totalUsers,
+            'todayItemsSold' => $todayItemsSold,
+            'monthlyRevenue' => $monthlyRevenue,
+            'todayHeaders'   => $todayHeaders,
+            'todayDetails'   => $todayDetails,
         ]);
     }
 }

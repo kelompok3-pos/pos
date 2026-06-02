@@ -205,4 +205,24 @@ class Transaction
         $stmt->execute();
         return (int) $stmt->fetchColumn();
     }
+    /**
+     * Get monthly revenue for the last 6 months
+     *
+     * @return array
+     */
+    public function monthlyRevenue(): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT 
+                DATE_FORMAT(created_at, '%b %Y') AS label,
+                DATE_FORMAT(created_at, '%Y-%m') AS period,
+                COALESCE(SUM(total_price), 0) AS total
+            FROM transactions
+            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 5 MONTH)
+            GROUP BY period, label
+            ORDER BY period ASC"
+        );
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
 }
