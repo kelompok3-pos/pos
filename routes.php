@@ -20,7 +20,9 @@ $routes = [
     // ============================================================
     // HOME
     // ============================================================
-    '/'                          => ['HomeController',                  'index'],
+    '/'                          => ['HomeController',                  'landing'],
+    '/dashboard'                 => ['HomeController',                  'index'],
+    '/report/daily/export'       => ['HomeController',                  'exportDaily'],
 
     // ============================================================
     // AUTH — Login & Logout
@@ -45,9 +47,11 @@ $routes = [
     '/kasir/product'                        => ['Kasir/KasirProductController',      'index'],
     '/kasir/transaction'                   => ['Kasir/KasirTransactionController',   'index'],
     '/kasir/transaction/add'               => ['Kasir/KasirTransactionController',   'add'],
+    '/kasir/transaction/update'            => ['Kasir/KasirTransactionController',   'update'],
     '/kasir/transaction/remove'            => ['Kasir/KasirTransactionController',   'remove'],
     '/kasir/transaction/clear'             => ['Kasir/KasirTransactionController',   'clear'],
     '/kasir/transaction/checkout'          => ['Kasir/KasirTransactionController',   'checkout'],
+    '/kasir/transaction/receipt'           => ['Kasir/KasirTransactionController',   'receipt'],
 
 
     // ============================================================

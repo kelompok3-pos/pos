@@ -2,11 +2,18 @@
 <!-- ADMIN: FORM TAMBAH PRODUK -->
 <!-- ============================================================ -->
 
+<div class="page-hero">
+    <div class="page-title">
+        <h2><i class="bi bi-plus-lg text-primary"></i> Tambah Produk</h2>
+        <p>Tambahkan produk baru dengan harga dan stok awal yang jelas.</p>
+    </div>
+</div>
+
 <div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="bi bi-plus-lg"></i> Tambah Produk Baru</h5>
+    <div class="col-md-8 col-lg-7">
+        <div class="card modern-card">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h5 class="mb-0 fw-bold text-dark">Informasi Produk</h5>
             </div>
             <div class="card-body">
                 <form action="<?= url('/admin/product/store') ?>" method="POST">

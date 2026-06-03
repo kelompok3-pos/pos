@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     environment:
       MARIADB_ROOT_PASSWORD: root
-      MARIADB_DATABASE: root_db
+      MARIADB_DATABASE: pos_db
       MARIADB_USER: user
       MARIADB_PASSWORD: user
       TZ: Asia/Jakarta
@@ -14,6 +14,7 @@ services:
       - '3306'
     volumes:
       - "./mariadb_data:/var/lib/mysql"
+      - "./database/pos_db.sql:/docker-entrypoint-initdb.d/01-pos_db.sql:ro"
 
   phpmyadmin:
     image: phpmyadmin:5.2.1-apache
