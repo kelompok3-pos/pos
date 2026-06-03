@@ -115,7 +115,7 @@ $totalKasir = count(array_filter($users, fn($u) => $u['role'] === 'kasir'));
 
 <aside class="sidebar">
     <div class="sidebar-brand">
-        <span>My</span>TokoGue
+        <span>Toko</span>Ku
     </div>
     <nav class="sidebar-nav">
         <div class="nav-label">Admin</div>
