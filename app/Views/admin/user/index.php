@@ -9,8 +9,8 @@
         </h2>
         <p class="text-muted mb-0">Kelola akun tim aktif sesuai hak akses</p>
     </div>
-    <a href="<?= url('/admin/user/create') ?>" class="btn btn-primary">
-        <i class="bi bi-person-plus"></i> Tambah User
+    <a href="/admin/user/create" class="btn btn-primary fw-bold px-4 py-2" style="border-radius: 8px;">
+        <i class="bi bi-person-plus-fill"></i> Tambah User
     </a>
 </div>
 
@@ -25,23 +25,23 @@
         </div>
     </div>
     <div class="table-responsive">
-        <table class="table table-hover mb-0">
+        <table class="table table-hover align-middle mb-0">
             <thead class="table-dark">
                 <tr>
-                    <th style="width: 60px;">#</th>
+                    <th style="width: 60px;" class="ps-4">#</th>
                     <th>Nama</th>
                     <th>Email</th>
                     <th>Role</th>
                     <th>Terdaftar</th>
-                    <th class="text-center" style="width: 120px;">Aksi</th>
+                    <th class="text-center" style="width: 160px;">Aksi</th>
                 </tr>
             </thead>
             <tbody id="userTableBody">
                 <?php if (empty($users)): ?>
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
-                            <i class="bi bi-people fs-1"></i>
-                            <p class="mb-0 mt-2">Belum ada user.</p>
+                        <td colspan="6" class="text-center text-muted py-5 fw-bold">
+                            <i class="bi bi-people fs-1 text-secondary d-block mb-2"></i>
+                            Belum ada data user aktif di database.
                         </td>
                     </tr>
                 <?php else: ?>
@@ -53,9 +53,9 @@
                                 && ($u['role'] !== 'admin' || isSuperAdmin());
                         ?>
                         <tr>
-                            <td class="text-muted"><?= $index + 1 ?></td>
-                            <td class="fw-semibold"><?= e($u['name']) ?></td>
-                            <td class="text-muted"><?= e($u['email']) ?></td>
+                            <td class="text-muted ps-4 fw-bold"><?= $index + 1 ?></td>
+                            <td class="fw-bold text-dark"><?= e($u['name']) ?></td>
+                            <td class="text-muted fw-semibold"><?= e($u['email']) ?></td>
                             <td>
                                 <?php if ($u['role'] === 'super_admin'): ?>
                                     <span class="badge bg-dark">
@@ -71,7 +71,7 @@
                                     </span>
                                 <?php endif; ?>
                             </td>
-                            <td class="text-muted small">
+                            <td class="text-muted fw-semibold small">
                                 <?= date('d M Y', strtotime($u['created_at'])) ?>
                             </td>
                             <td class="text-center">

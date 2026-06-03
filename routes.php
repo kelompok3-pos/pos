@@ -11,8 +11,8 @@
  * - Controller di subfolder: 'Admin/AdminProductController'
  *
  * Contoh menambah route baru:
- *   '/admin/category'        => ['Admin/AdminCategoryController', 'index'],
- *   '/admin/category/create' => ['Admin/AdminCategoryController', 'create'],
+ * '/admin/category'        => ['Admin/AdminCategoryController', 'index'],
+ * '/admin/category/create' => ['Admin/AdminCategoryController', 'create'],
  * =================================================================
  */
 
@@ -44,7 +44,7 @@ $routes = [
     // ============================================================
     // KASIR — Lihat Produk & Transaksi
     // ============================================================
-    '/kasir/product'                        => ['Kasir/KasirProductController',      'index'],
+    '/kasir/product'                       => ['Kasir/KasirProductController',      'index'],
     '/kasir/transaction'                   => ['Kasir/KasirTransactionController',   'index'],
     '/kasir/transaction/add'               => ['Kasir/KasirTransactionController',   'add'],
     '/kasir/transaction/update'            => ['Kasir/KasirTransactionController',   'update'],
@@ -53,6 +53,7 @@ $routes = [
     '/kasir/transaction/checkout'          => ['Kasir/KasirTransactionController',   'checkout'],
     '/kasir/transaction/receipt'           => ['Kasir/KasirTransactionController',   'receipt'],
 
+    '/kasir/dashboard'           => ['Kasir/KasirDashboardController',  'index'], // ◄ FIXED FINAL KELOMPOK
 
     // ============================================================
     // ADMIN — Kelola Users
@@ -61,5 +62,4 @@ $routes = [
     '/admin/user/create'         => ['Admin/AdminUserController',       'create'],
     '/admin/user/store'          => ['Admin/AdminUserController',       'store'],
     '/admin/user/delete'         => ['Admin/AdminUserController',       'delete'],
-
 ];
