@@ -37,6 +37,25 @@ function redirect(string $url): void
 }
 
 /**
+ * Generate full URL untuk form action, link, redirect
+ * Include APP_URL dari .env agar kompatibel dengan subfolder
+ *
+ * Contoh:
+ *   url('/login/authenticate')    → http://localhost/pos/public/login/authenticate
+ *   url('/admin/product/store')   → http://localhost/pos/public/admin/product/store
+ */
+function url(string $path): string
+{
+    $base = rtrim(env('APP_URL', ''), '/');
+
+    if ($base === '') {
+        return $path;
+    }
+
+    return $base . '/' . ltrim($path, '/');
+}
+
+/**
  * Generate URL lengkap untuk asset (CSS, JS, gambar)
  * Include base path dari .env agar kompatibel dengan subfolder
  *

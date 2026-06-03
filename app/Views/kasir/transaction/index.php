@@ -58,7 +58,7 @@ $transactionDetails  ??= [];
                                         </td>
                                         <td class="text-center">
                                             <?php if ($product['stock'] > 0): ?>
-                                                <form action="/kasir/transaction/add" method="POST" class="d-flex gap-1">
+                                                <form action="<?= url('/kasir/transaction/add') ?>" method="POST" class="d-flex gap-1">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
                                                     <input type="number" name="quantity" class="form-control form-control-sm"
@@ -124,7 +124,7 @@ $transactionDetails  ??= [];
                                             <?= formatRupiah($item['subtotal']) ?>
                                         </td>
                                         <td class="align-middle">
-                                            <form action="/kasir/transaction/remove" method="POST">
+                                            <form action="<?= url('/kasir/transaction/remove') ?>" method="POST">
                                                 <?= csrf_field() ?>
                                                 <input type="hidden" name="product_id" value="<?= $item['product_id'] ?>">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger"
@@ -148,13 +148,13 @@ $transactionDetails  ??= [];
 
                     <!-- Tombol Aksi -->
                     <div class="card-footer bg-white d-flex gap-2">
-                        <form action="/kasir/transaction/checkout" method="POST" class="flex-grow-1">
+                        <form action="<?= url('/kasir/transaction/checkout') ?>" method="POST" class="flex-grow-1">
                             <?= csrf_field() ?>
                             <button type="submit" class="btn btn-success w-100">
                                 <i class="bi bi-check-circle"></i> Bayar Sekarang
                             </button>
                         </form>
-                        <form action="/kasir/transaction/clear" method="POST">
+                        <form action="<?= url('/kasir/transaction/clear') ?>" method="POST">
                             <?= csrf_field() ?>
                             <button type="submit" class="btn btn-outline-secondary"
                                     onclick="return confirm('Kosongkan keranjang?')">

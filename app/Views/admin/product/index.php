@@ -4,7 +4,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-box-seam"></i> Daftar Produk</h2>
-    <a href="/admin/product/create" class="btn btn-primary">
+    <a href="<?= url('/admin/product/create') ?>" class="btn btn-primary">
         <i class="bi bi-plus-lg"></i> Tambah Produk
     </a>
 </div>
@@ -12,7 +12,7 @@
 <?php if (empty($products)): ?>
     <div class="alert alert-info">
         <i class="bi bi-info-circle"></i> Belum ada produk. 
-        <a href="/admin/product/create">Tambah produk pertama</a>.
+        <a href="<?= url('/admin/product/create') ?>">Tambah produk pertama</a>.
     </div>
 <?php else: ?>
     <div class="card border-0 shadow-sm">
@@ -43,11 +43,11 @@
                             </td>
                             <td class="text-muted"><?= e($product['description'] ?? '-') ?></td>
                             <td>
-                                <a href="/admin/product/edit?id=<?= $product['id'] ?>" 
+                                <a href="<?= url('/admin/product/edit') ?>?id=<?= $product['id'] ?>" 
                                    class="btn btn-sm btn-warning">
                                     <i class="bi bi-pencil"></i> Edit
                                 </a>
-                                <a href="/admin/product/delete?id=<?= $product['id'] ?>" 
+                                <a href="<?= url('/admin/product/delete') ?>?id=<?= $product['id'] ?>"
                                    class="btn btn-sm btn-danger"
                                    onclick="return confirm('Yakin ingin menghapus produk ini?')">
                                     <i class="bi bi-trash"></i> Hapus

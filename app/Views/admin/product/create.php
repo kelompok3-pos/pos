@@ -9,7 +9,7 @@
                 <h5 class="mb-0"><i class="bi bi-plus-lg"></i> Tambah Produk Baru</h5>
             </div>
             <div class="card-body">
-                <form action="/admin/product/store" method="POST">
+                <form action="<?= url('/admin/product/store') ?>" method="POST">
                     <?= csrf_field() ?>
 
                     <div class="mb-3">
@@ -38,7 +38,7 @@
                     </div>
 
                     <div class="d-flex justify-content-between">
-                        <a href="/admin/product" class="btn btn-secondary">
+                        <a href="<?= url('/admin/product') ?>" class="btn btn-secondary">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
                         <button type="submit" class="btn btn-primary">
