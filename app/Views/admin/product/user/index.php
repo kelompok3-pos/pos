@@ -38,7 +38,7 @@
                         </td>
                         <td class="text-muted"><?= date('d M Y • H:i', strtotime($u['created_at'])) ?></td>
                         <td class="text-center">
-                            <a href="/admin/user/delete?id=<?= $u['id'] ?>" class="btn btn-sm btn-danger px-2" onclick="return confirm('Apakah Anda yakin ingin menonaktifkan akun <?= e($u['email']) ?>?')">
+                            <a href="<?= url('/admin/user/delete') ?>?id=<?= $u['id'] ?>" class="btn btn-sm btn-danger px-2" onclick="return confirm('Apakah Anda yakin ingin menonaktifkan akun <?= e($u['email']) ?>?')">
                                 <i class="bi bi-trash-fill"></i> Hapus
                             </a>
                         </td>

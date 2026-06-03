@@ -99,14 +99,14 @@ $todayDetails   ??= [];
         <div class="card border-0 shadow-sm bg-white">
             <div class="card-body d-flex gap-2">
                 <?php if (isRole('admin')): ?>
-                    <a href="/admin/product/create" class="btn btn-primary">
+                    <a href="<?= url('/admin/product/create') ?>" class="btn btn-primary">
                         <i class="bi bi-plus-lg me-1"></i> Tambah Produk
                     </a>
-                    <a href="/admin/user/create" class="btn btn-outline-primary">
+                    <a href="<?= url('/admin/user/create') ?>" class="btn btn-outline-primary">
                         <i class="bi bi-person-plus me-1"></i> Tambah User
                     </a>
                 <?php endif; ?>
-                <a href="/kasir/transaction" class="btn btn-success">
+                <a href="<?= url('/kasir/transaction') ?>" class="btn btn-success">
                     <i class="bi bi-cart-check me-1"></i> Transaksi
                 </a>
             </div>

@@ -12,7 +12,7 @@
                     <p class="text-muted">Silakan login untuk melanjutkan</p>
                 </div>
 
-                <form method="POST" action="/login/authenticate">
+                <form method="POST" action="<?= url('/login/authenticate') ?>">
                     <?= csrf_field() ?>
 
                     <div class="mb-3">
