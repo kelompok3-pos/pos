@@ -2,8 +2,11 @@
 <!-- ADMIN: DAFTAR PRODUK -->
 <!-- ============================================================ -->
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-box-seam"></i> Daftar Produk</h2>
+<div class="page-hero">
+    <div class="page-title">
+        <h2><i class="bi bi-box-seam text-primary"></i> Daftar Produk</h2>
+        <p>Kelola nama, harga, stok, dan status produk toko.</p>
+    </div>
     <a href="<?= url('/admin/product/create') ?>" class="btn btn-primary">
         <i class="bi bi-plus-lg"></i> Tambah Produk
     </a>
@@ -15,7 +18,7 @@
         <a href="<?= url('/admin/product/create') ?>">Tambah produk pertama</a>.
     </div>
 <?php else: ?>
-    <div class="card border-0 shadow-sm">
+    <div class="card modern-card">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-dark">
@@ -47,11 +50,15 @@
                                    class="btn btn-sm btn-warning">
                                     <i class="bi bi-pencil"></i> Edit
                                 </a>
-                                <a href="<?= url('/admin/product/delete') ?>?id=<?= $product['id'] ?>"
-                                   class="btn btn-sm btn-danger"
-                                   onclick="return confirm('Yakin ingin menghapus produk ini?')">
-                                    <i class="bi bi-trash"></i> Hapus
-                                </a>
+                                <form action="<?= url('/admin/product/delete') ?>" method="POST" class="d-inline">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="id" value="<?= e((string) $product['id']) ?>">
+                                    <button type="submit"
+                                            class="btn btn-sm btn-danger"
+                                            onclick="return confirm('Yakin ingin menghapus produk ini?')">
+                                        <i class="bi bi-trash"></i> Hapus
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                     <?php endforeach; ?>

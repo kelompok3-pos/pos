@@ -59,11 +59,21 @@ class AdminProductController extends Controller
     public function store(): void
     {
         verifyCsrf();
+        keepOldInput();
+
+        $name  = trim($_POST['name'] ?? '');
+        $price = (float) ($_POST['price'] ?? -1);
+        $stock = (int) ($_POST['stock'] ?? -1);
+
+        if ($name === '' || $price < 0 || $stock < 0) {
+            flash('error', 'Nama, harga, dan stok produk wajib diisi dengan benar.');
+            $this->redirect('/admin/product/create');
+        }
 
         $this->productModel->create([
-            'name'        => $_POST['name'],
-            'price'       => $_POST['price'],
-            'stock'       => $_POST['stock'],
+            'name'        => $name,
+            'price'       => $price,
+            'stock'       => $stock,
             'description' => $_POST['description'] ?? '',
         ]);
 
@@ -104,16 +114,24 @@ class AdminProductController extends Controller
         verifyCsrf();
 
         $id = $_POST['id'] ?? null;
+        $name  = trim($_POST['name'] ?? '');
+        $price = (float) ($_POST['price'] ?? -1);
+        $stock = (int) ($_POST['stock'] ?? -1);
 
         if (!$id) {
             flash('error', 'ID produk tidak ditemukan.');
             $this->redirect('/admin/product');
         }
 
+        if ($name === '' || $price < 0 || $stock < 0) {
+            flash('error', 'Nama, harga, dan stok produk wajib diisi dengan benar.');
+            $this->redirect('/admin/product/edit?id=' . $id);
+        }
+
         $this->productModel->update($id, [
-            'name'        => $_POST['name'],
-            'price'       => $_POST['price'],
-            'stock'       => $_POST['stock'],
+            'name'        => $name,
+            'price'       => $price,
+            'stock'       => $stock,
             'description' => $_POST['description'] ?? '',
         ]);
 
@@ -126,7 +144,9 @@ class AdminProductController extends Controller
      */
     public function delete(): void
     {
-        $id = $_GET['id'] ?? null;
+        verifyCsrf();
+
+        $id = $_POST['id'] ?? null;
 
         if (!$id) {
             flash('error', 'ID produk tidak ditemukan.');

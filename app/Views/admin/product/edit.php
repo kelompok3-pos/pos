@@ -3,11 +3,18 @@
 <!-- ============================================================ -->
 <?php $product ??= []; ?>
 
+<div class="page-hero">
+    <div class="page-title">
+        <h2><i class="bi bi-pencil text-warning"></i> Edit Produk</h2>
+        <p>Perbarui data produk dan stok agar kasir selalu melihat data terbaru.</p>
+    </div>
+</div>
+
 <div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="bi bi-pencil"></i> Edit Produk</h5>
+    <div class="col-md-8 col-lg-7">
+        <div class="card modern-card">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h5 class="mb-0 fw-bold text-dark">Detail Produk</h5>
             </div>
             <div class="card-body">
                 <form action="<?= url('/admin/product/update') ?>" method="POST">

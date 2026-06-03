@@ -20,7 +20,9 @@ $routes = [
     // ============================================================
     // HOME
     // ============================================================
-    '/'                          => ['HomeController',                  'index'],
+    '/'                          => ['HomeController',                  'landing'],
+    '/dashboard'                 => ['HomeController',                  'index'],
+    '/report/daily/export'       => ['HomeController',                  'exportDaily'],
 
     // ============================================================
     // AUTH — Login & Logout
@@ -42,13 +44,16 @@ $routes = [
     // ============================================================
     // KASIR — Lihat Produk & Transaksi
     // ============================================================
+    '/kasir/product'                       => ['Kasir/KasirProductController',      'index'],
+    '/kasir/transaction'                   => ['Kasir/KasirTransactionController',   'index'],
+    '/kasir/transaction/add'               => ['Kasir/KasirTransactionController',   'add'],
+    '/kasir/transaction/update'            => ['Kasir/KasirTransactionController',   'update'],
+    '/kasir/transaction/remove'            => ['Kasir/KasirTransactionController',   'remove'],
+    '/kasir/transaction/clear'             => ['Kasir/KasirTransactionController',   'clear'],
+    '/kasir/transaction/checkout'          => ['Kasir/KasirTransactionController',   'checkout'],
+    '/kasir/transaction/receipt'           => ['Kasir/KasirTransactionController',   'receipt'],
+
     '/kasir/dashboard'           => ['Kasir/KasirDashboardController',  'index'], // ◄ FIXED FINAL KELOMPOK
-    '/kasir/product'             => ['Kasir/KasirProductController',    'index'],
-    '/kasir/transaction'         => ['Kasir/KasirTransactionController', 'index'],
-    '/kasir/transaction/add'     => ['Kasir/KasirTransactionController', 'add'],
-    '/kasir/transaction/remove'  => ['Kasir/KasirTransactionController', 'remove'],
-    '/kasir/transaction/clear'   => ['Kasir/KasirTransactionController', 'clear'],
-    '/kasir/transaction/checkout'=> ['Kasir/KasirTransactionController', 'checkout'],
 
     // ============================================================
     // ADMIN — Kelola Users
@@ -56,5 +61,7 @@ $routes = [
     '/admin/user'                => ['Admin/AdminUserController',       'index'],
     '/admin/user/create'         => ['Admin/AdminUserController',       'create'],
     '/admin/user/store'          => ['Admin/AdminUserController',       'store'],
+    '/admin/user/edit'           => ['Admin/AdminUserController',       'edit'],
+    '/admin/user/update'         => ['Admin/AdminUserController',       'update'],
     '/admin/user/delete'         => ['Admin/AdminUserController',       'delete'],
 ];

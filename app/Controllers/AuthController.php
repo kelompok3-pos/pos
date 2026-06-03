@@ -34,9 +34,8 @@ class AuthController extends Controller
             $this->redirectBasedOnRole();
         }
 
-        $this->view('auth/login', [
-            'title' => 'Login',
-        ]);
+        $title = 'Login';
+        require BASE_PATH . '/app/Views/auth/login.php';
     }
 
     /**
@@ -62,6 +61,7 @@ class AuthController extends Controller
             $this->redirect('/login');
         }
 
+        session_regenerate_id(true);
         $_SESSION['user'] = $user;
 
         flash('success', 'Selamat datang, ' . e($user['email']) . '!');
@@ -74,6 +74,7 @@ class AuthController extends Controller
     public function logout(): void
     {
         unset($_SESSION['user']);
+        session_regenerate_id(true);
         flash('success', 'Anda berhasil logout.');
         $this->redirect('/login');
     }
@@ -86,9 +87,9 @@ class AuthController extends Controller
         $role = $_SESSION['user']['role'] ?? 'kasir';
 
         if ($role === 'admin') {
-            $this->redirect('/admin/product');
+            $this->redirect('/dashboard');
         } else {
-            $this->redirect('/kasir/product');
+            $this->redirect('/dashboard');
         }
     }
 }

@@ -158,35 +158,104 @@ class KasirTransactionController extends Controller
         }
 
         $kasirId = (int) $_SESSION['user']['id'];
+        $total = array_reduce($cart, fn($sum, $item) => $sum + $item['subtotal'], 0);
+        $paidAmount = (float) ($_POST['paid_amount'] ?? 0);
+
+        if ($paidAmount < $total) {
+            flash('error', 'Uang dibayar kurang. Total belanja: ' . formatRupiah($total));
+            $this->redirect('/kasir/transaction');
+        }
 
         // Konversi cart ke format items
         $items = array_map(fn($item) => [
-            'name'     => $item['name'],
-            'price'    => $item['price'],
-            'quantity' => $item['quantity'],
-            'subtotal' => $item['subtotal'],
+            'product_id' => $item['product_id'],
+            'name'       => $item['name'],
+            'price'      => $item['price'],
+            'quantity'   => $item['quantity'],
+            'subtotal'   => $item['subtotal'],
         ], $cart);
 
-        // Simpan transaksi
-        $success = $this->transactionModel->create($kasirId, $items);
+        // Simpan transaksi dan update stok dalam satu database transaction
+        $transactionId = $this->transactionModel->create($kasirId, $items, $paidAmount);
 
-        if ($success) {
-            // Kurangi stok masing-masing produk
-            foreach ($cart as $item) {
-                $this->productModel->reduceStock($item['product_id'], $item['quantity']);
-            }
-
-            // Hitung total
-            $total = array_reduce($cart, fn($sum, $item) => $sum + $item['subtotal'], 0);
-
+        if ($transactionId) {
             // Bersihkan keranjang
             unset($_SESSION['cart']);
+            $_SESSION['last_transaction_id'] = $transactionId;
 
-            flash('success', 'Transaksi berhasil! Total: ' . formatRupiah($total));
+            flash(
+                'success',
+                'Transaksi berhasil! Total: ' . formatRupiah($total)
+                . ' | Bayar: ' . formatRupiah($paidAmount)
+                . ' | Kembalian: ' . formatRupiah($paidAmount - $total)
+            );
         } else {
-            flash('error', 'Transaksi gagal. Silakan coba lagi.');
+            flash('error', 'Transaksi gagal. Periksa stok produk dan nominal pembayaran.');
         }
 
         $this->redirect('/kasir/transaction');
+    }
+
+    /**
+     * Update quantity item di keranjang
+     */
+    public function update(): void
+    {
+        verifyCsrf();
+
+        $productId = (int) ($_POST['product_id'] ?? 0);
+        $quantity  = (int) ($_POST['quantity'] ?? 0);
+
+        if ($productId <= 0 || $quantity <= 0 || !isset($_SESSION['cart'][$productId])) {
+            flash('error', 'Data keranjang tidak valid.');
+            $this->redirect('/kasir/transaction');
+        }
+
+        $product = $this->productModel->getById($productId);
+
+        if (!$product) {
+            unset($_SESSION['cart'][$productId]);
+            flash('error', 'Produk tidak ditemukan atau sudah tidak aktif.');
+            $this->redirect('/kasir/transaction');
+        }
+
+        if ((int) $product['stock'] < $quantity) {
+            flash('error', 'Stok tidak mencukupi! Stok tersedia: ' . $product['stock']);
+            $this->redirect('/kasir/transaction');
+        }
+
+        $_SESSION['cart'][$productId]['quantity'] = $quantity;
+        $_SESSION['cart'][$productId]['subtotal'] = (float) $product['price'] * $quantity;
+
+        flash('success', 'Jumlah item berhasil diperbarui.');
+        $this->redirect('/kasir/transaction');
+    }
+
+    /**
+     * Tampilkan struk transaksi untuk dicetak
+     */
+    public function receipt(): void
+    {
+        $id = (int) ($_GET['id'] ?? ($_SESSION['last_transaction_id'] ?? 0));
+
+        if ($id <= 0) {
+            flash('error', 'ID transaksi tidak ditemukan.');
+            $this->redirect('/kasir/transaction');
+        }
+
+        $transaction = $this->transactionModel->getById($id);
+
+        if (!$transaction) {
+            flash('error', 'Transaksi tidak ditemukan.');
+            $this->redirect('/kasir/transaction');
+        }
+
+        $details = $this->transactionModel->getDetails($id);
+
+        $this->view('kasir/transaction/receipt', [
+            'title'       => 'Struk Transaksi',
+            'transaction' => $transaction,
+            'details'     => $details,
+        ]);
     }
 }

@@ -1,5 +1,5 @@
 <div class="d-flex align-items-center gap-2 mb-3">
-    <a href="/admin/user" class="btn btn-sm btn-secondary">
+    <a href="<?= url('/admin/user') ?>" class="btn btn-sm btn-secondary">
         <i class="bi bi-arrow-left"></i> Kembali
     </a>
 </div>
@@ -18,7 +18,7 @@
         <div class="card border-0 shadow-sm" style="border-radius: 16px;">
             <div class="card-body p-4">
                 
-                <form method="POST" action="/admin/user/update">
+                <form method="POST" action="<?= url('/admin/user/update') ?>">
                     <?= csrf_field() ?>
 
                     <input type="hidden" name="id" value="<?= $user['id'] ?>">
@@ -45,7 +45,9 @@
                     <div class="mb-4">
                         <label for="role" class="form-label fw-semibold text-dark">Role Jabatan</label>
                         <select class="form-select rounded" id="role" name="role" required>
-                            <option value="admin" <?= $user['role'] === 'admin' ? 'selected' : '' ?>>Admin (Administrator)</option>
+                            <?php if (!empty($canAssignAdmin)): ?>
+                                <option value="admin" <?= $user['role'] === 'admin' ? 'selected' : '' ?>>Admin (Administrator)</option>
+                            <?php endif; ?>
                             <option value="kasir" <?= $user['role'] === 'kasir' ? 'selected' : '' ?>>Kasir (Staff Toko)</option>
                         </select>
                     </div>

@@ -29,7 +29,7 @@ class Product
      */
     public function getAll(): array
     {
-        $stmt = $this->pdo->query("SELECT * FROM products ORDER BY id DESC");
+        $stmt = $this->pdo->query("SELECT * FROM products WHERE deleted_at IS NULL ORDER BY id DESC");
         return $stmt->fetchAll();
     }
 
@@ -41,7 +41,7 @@ class Product
      */
     public function getById(int $id): array|false
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id = ? AND deleted_at IS NULL");
         $stmt->execute([$id]);
         return $stmt->fetch();
     }
@@ -75,12 +75,25 @@ class Product
      */
     public function update(int $id, array $data): bool
     {
+        if (array_key_exists('image', $data)) {
+            $stmt = $this->pdo->prepare(
+                "UPDATE products SET name = ?, image = ?, price = ?, stock = ?, description = ? WHERE id = ?"
+            );
+            return $stmt->execute([
+                $data['name'],
+                $data['image'],
+                $data['price'],
+                $data['stock'],
+                $data['description'] ?? '',
+                $id,
+            ]);
+        }
+
         $stmt = $this->pdo->prepare(
-            "UPDATE products SET name = ?, image = ?, price = ?, stock = ?, description = ? WHERE id = ?"
+            "UPDATE products SET name = ?, price = ?, stock = ?, description = ? WHERE id = ?"
         );
         return $stmt->execute([
             $data['name'],
-            $data['image'] ?? null,
             $data['price'],
             $data['stock'],
             $data['description'] ?? '',
@@ -109,7 +122,7 @@ class Product
      */
     public function delete(int $id): bool
     {
-        $stmt = $this->pdo->prepare("DELETE FROM products WHERE id = ?");
+        $stmt = $this->pdo->prepare("UPDATE products SET deleted_at = NOW() WHERE id = ?");
         return $stmt->execute([$id]);
     }
 
@@ -123,7 +136,7 @@ class Product
     public function reduceStock(int $id, int $quantity): bool
     {
         $stmt = $this->pdo->prepare(
-            "UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?"
+            "UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ? AND deleted_at IS NULL"
         );
         return $stmt->execute([$quantity, $id, $quantity]);
     }
@@ -135,7 +148,7 @@ class Product
      */
     public function count(): int
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM products");
+        $stmt = $this->pdo->query("SELECT COUNT(*) FROM products WHERE deleted_at IS NULL");
         return (int) $stmt->fetchColumn();
     }
 
@@ -146,7 +159,22 @@ class Product
      */
     public function totalStock(): int
     {
-        $stmt = $this->pdo->query("SELECT COALESCE(SUM(stock), 0) FROM products");
+        $stmt = $this->pdo->query("SELECT COALESCE(SUM(stock), 0) FROM products WHERE deleted_at IS NULL");
         return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Ambil produk dengan stok menipis
+     *
+     * @param int $threshold Batas stok rendah
+     * @return array
+     */
+    public function getLowStock(int $threshold = 5): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT * FROM products WHERE stock <= ? AND deleted_at IS NULL ORDER BY stock ASC, name ASC"
+        );
+        $stmt->execute([$threshold]);
+        return $stmt->fetchAll();
     }
 }
