@@ -44,6 +44,9 @@ class HomeController extends Controller
         $todayPaidAmount = $transactionModel->todayPaidAmount();
         $todayChangeAmount = $transactionModel->todayChangeAmount();
         $todayTopProducts = $transactionModel->todayTopProducts();
+        $dailySalesChart = $transactionModel->getDailySalesChartData(7);
+        $monthlySalesChart = $transactionModel->getSalesChartData();
+        $topSellingProducts = $transactionModel->getTopSellingProducts();
         $totalUsers    = $userModel->count();
         $lowStockProducts = $productModel->getLowStock();
 
@@ -64,6 +67,9 @@ class HomeController extends Controller
             'todayPaidAmount' => $todayPaidAmount,
             'todayChangeAmount' => $todayChangeAmount,
             'todayTopProducts' => $todayTopProducts,
+            'dailySalesChart' => $dailySalesChart,
+            'monthlySalesChart' => $monthlySalesChart,
+            'topSellingProducts' => $topSellingProducts,
             'totalUsers'    => $totalUsers,
             'lowStockProducts' => $lowStockProducts,
             'todayHeaders'  => $todayHeaders,

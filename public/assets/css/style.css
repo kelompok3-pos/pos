@@ -893,6 +893,30 @@ main {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
+.dashboard-report-grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+    margin-bottom: 18px;
+}
+
+.dashboard-report-grid .dashboard-chart-panel:nth-child(3),
+.dashboard-report-grid .dashboard-chart-panel:nth-child(4) {
+    grid-column: span 1;
+}
+
+.dashboard-chart-wrap {
+    height: 320px;
+    padding: 4px 22px 22px;
+    position: relative;
+}
+
+.dashboard-chart-wrap canvas {
+    display: block;
+    max-height: 100%;
+    width: 100% !important;
+}
+
 .dashboard-panel {
     background: #fff;
     border: 1px solid #e2e8f0;
@@ -1042,6 +1066,7 @@ main {
 
     .dashboard-actions,
     .dashboard-kpis,
+    .dashboard-report-grid,
     .dashboard-grid {
         grid-template-columns: 1fr 1fr;
     }
@@ -1050,6 +1075,7 @@ main {
 @media (max-width: 575.98px) {
     .dashboard-actions,
     .dashboard-kpis,
+    .dashboard-report-grid,
     .dashboard-grid {
         grid-template-columns: 1fr;
     }

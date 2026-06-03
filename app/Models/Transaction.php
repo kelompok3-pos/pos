@@ -105,6 +105,28 @@ class Transaction
     }
 
     /**
+     * Mengambil data grafik penjualan harian beberapa hari terakhir
+     */
+    public function getDailySalesChartData(int $days = 7): array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                DATE(created_at) AS date_sort,
+                DATE_FORMAT(created_at, '%d %b') AS date_label,
+                SUM(total_price) AS total,
+                COUNT(*) AS jumlah_transaksi,
+                COALESCE(SUM(paid_amount), 0) AS total_dibayar,
+                COALESCE(SUM(change_amount), 0) AS total_kembalian
+            FROM transactions
+            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+            GROUP BY date_sort, date_label
+            ORDER BY date_sort ASC
+        ");
+        $stmt->execute([$days - 1]);
+        return $stmt->fetchAll();
+    }
+
+    /**
      * Mengambil 5 log transaksi terbaru masuk
      */
     public function getRecentTransactions(): array
