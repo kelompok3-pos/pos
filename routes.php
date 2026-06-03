@@ -61,5 +61,7 @@ $routes = [
     '/admin/user'                => ['Admin/AdminUserController',       'index'],
     '/admin/user/create'         => ['Admin/AdminUserController',       'create'],
     '/admin/user/store'          => ['Admin/AdminUserController',       'store'],
+    '/admin/user/edit'           => ['Admin/AdminUserController',       'edit'],
+    '/admin/user/update'         => ['Admin/AdminUserController',       'update'],
     '/admin/user/delete'         => ['Admin/AdminUserController',       'delete'],
 ];

@@ -75,6 +75,12 @@
                                 <?= date('d M Y', strtotime($u['created_at'])) ?>
                             </td>
                             <td class="text-center">
+                                <?php if ($u['role'] !== 'super_admin' && ($u['role'] !== 'admin' || isSuperAdmin())): ?>
+                                    <a href="<?= url('/admin/user/edit') ?>?id=<?= e((string) $u['id']) ?>"
+                                       class="btn btn-sm btn-warning">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                <?php endif; ?>
                                 <?php if ($canDeleteUser): ?>
                                     <form action="<?= url('/admin/user/delete') ?>" method="POST" class="d-inline">
                                         <?= csrf_field() ?>

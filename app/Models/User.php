@@ -86,15 +86,16 @@ class User
      * Update data user berdasarkan ID
      *
      * @param int   $id
-     * @param array $data ['email', 'role']
+     * @param array $data ['name', 'email', 'role']
      * @return bool
      */
     public function update(int $id, array $data): bool
     {
         $stmt = $this->pdo->prepare(
-            "UPDATE users SET email = ?, role = ? WHERE id = ?"
+            "UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?"
         );
         return $stmt->execute([
+            $data['name'],
             $data['email'],
             $data['role'] ?? 'kasir',
             $id,
