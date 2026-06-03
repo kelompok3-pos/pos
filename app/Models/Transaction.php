@@ -89,13 +89,14 @@ class Transaction
     }
 
     /**
-     * Save new transaction (header + items in one method)
+     * Save new transaction, items, and stock updates atomically
      *
      * @param int   $cashierId   Cashier ID from session
-     * @param array $items       [['name' => 'Kopi', 'price' => 25000, 'quantity' => 2, 'subtotal' => 50000], ...]
-     * @return bool
+     * @param array $items       [['product_id' => 1, 'name' => 'Kopi', 'price' => 25000, 'quantity' => 2, 'subtotal' => 50000], ...]
+     * @param float $paidAmount  Amount paid by customer
+     * @return int|false         New transaction ID, or false on failure
      */
-    public function create(int $cashierId, array $items): bool
+    public function create(int $cashierId, array $items, float $paidAmount): int|false
     {
         if (empty($items)) {
             return false;
@@ -103,6 +104,11 @@ class Transaction
 
         // Calculate total price
         $totalPrice = array_reduce($items, fn($sum, $item) => $sum + $item['subtotal'], 0);
+        $changeAmount = $paidAmount - $totalPrice;
+
+        if ($paidAmount < $totalPrice) {
+            return false;
+        }
 
         // Generate transaction code: TRX-YYYYMM-NNN
         $code = $this->generateTransactionCode();
@@ -110,11 +116,35 @@ class Transaction
         try {
             $this->pdo->beginTransaction();
 
+            $stmtStock = $this->pdo->prepare(
+                "SELECT stock FROM products WHERE id = ? AND deleted_at IS NULL FOR UPDATE"
+            );
+            $stmtReduce = $this->pdo->prepare(
+                "UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?"
+            );
+
+            foreach ($items as $item) {
+                $productId = (int) ($item['product_id'] ?? 0);
+                $quantity  = (int) ($item['quantity'] ?? 0);
+
+                if ($productId <= 0 || $quantity <= 0) {
+                    throw new RuntimeException('Item transaksi tidak valid.');
+                }
+
+                $stmtStock->execute([$productId]);
+                $stock = $stmtStock->fetchColumn();
+
+                if ($stock === false || (int) $stock < $quantity) {
+                    throw new RuntimeException('Stok produk tidak mencukupi.');
+                }
+            }
+
             // Insert transaction header
             $stmt = $this->pdo->prepare(
-                "INSERT INTO transactions (transaction_code, cashier_id, total_price) VALUES (?, ?, ?)"
+                "INSERT INTO transactions (transaction_code, cashier_id, total_price, paid_amount, change_amount)
+                 VALUES (?, ?, ?, ?, ?)"
             );
-            $stmt->execute([$code, $cashierId, $totalPrice]);
+            $stmt->execute([$code, $cashierId, $totalPrice, $paidAmount, $changeAmount]);
             $transactionId = (int) $this->pdo->lastInsertId();
 
             // Insert transaction items
@@ -122,6 +152,16 @@ class Transaction
                 "INSERT INTO transaction_items (transaction_id, product_name, quantity, subtotal) VALUES (?, ?, ?, ?)"
             );
             foreach ($items as $item) {
+                $stmtReduce->execute([
+                    $item['quantity'],
+                    $item['product_id'],
+                    $item['quantity'],
+                ]);
+
+                if ($stmtReduce->rowCount() !== 1) {
+                    throw new RuntimeException('Gagal mengurangi stok produk.');
+                }
+
                 $stmtItem->execute([
                     $transactionId,
                     $item['name'],
@@ -131,7 +171,7 @@ class Transaction
             }
 
             $this->pdo->commit();
-            return true;
+            return $transactionId;
         } catch (Exception $e) {
             $this->pdo->rollBack();
             return false;
@@ -204,5 +244,57 @@ class Transaction
         );
         $stmt->execute();
         return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Total uang diterima hari ini
+     *
+     * @return float
+     */
+    public function todayPaidAmount(): float
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT COALESCE(SUM(paid_amount), 0) FROM transactions WHERE DATE(created_at) = CURDATE()"
+        );
+        $stmt->execute();
+        return (float) $stmt->fetchColumn();
+    }
+
+    /**
+     * Total kembalian hari ini
+     *
+     * @return float
+     */
+    public function todayChangeAmount(): float
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT COALESCE(SUM(change_amount), 0) FROM transactions WHERE DATE(created_at) = CURDATE()"
+        );
+        $stmt->execute();
+        return (float) $stmt->fetchColumn();
+    }
+
+    /**
+     * Produk terlaris hari ini
+     *
+     * @param int $limit
+     * @return array
+     */
+    public function todayTopProducts(int $limit = 5): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT ti.product_name,
+                    SUM(ti.quantity) AS total_quantity,
+                    SUM(ti.subtotal) AS total_sales
+             FROM transaction_items ti
+             INNER JOIN transactions t ON ti.transaction_id = t.id
+             WHERE DATE(t.created_at) = CURDATE()
+             GROUP BY ti.product_name
+             ORDER BY total_quantity DESC, total_sales DESC
+             LIMIT ?"
+        );
+        $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
     }
 }

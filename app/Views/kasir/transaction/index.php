@@ -6,7 +6,18 @@ $products            ??= [];
 $transactions        ??= [];
 $cart                 ??= [];
 $transactionDetails  ??= [];
+$lastTransactionId   = $_SESSION['last_transaction_id'] ?? null;
 ?>
+
+<div class="page-hero">
+    <div class="page-title">
+        <h2><i class="bi bi-cart-check text-success"></i> Transaksi Penjualan</h2>
+        <p>Cari produk, atur jumlah, hitung kembalian, dan cetak struk dengan cepat.</p>
+    </div>
+    <a href="<?= url('/report/daily/export') ?>" class="btn btn-outline-secondary">
+        <i class="bi bi-download"></i> Export CSV
+    </a>
+</div>
 
 <div class="row g-4">
 
@@ -14,9 +25,16 @@ $transactionDetails  ??= [];
     <div class="col-lg-5">
 
         <!-- Daftar Produk -->
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-primary text-white">
+        <div class="card modern-card mb-3">
+            <div class="card-header bg-white border-0 d-flex align-items-center justify-content-between gap-2 pt-4 px-4">
                 <h5 class="mb-0"><i class="bi bi-box-seam"></i> Pilih Produk</h5>
+                <div class="position-relative product-search-wrap">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-2 text-muted"></i>
+                    <input type="search"
+                           class="form-control form-control-sm ps-4"
+                           id="productSearch"
+                           placeholder="Cari produk...">
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -39,7 +57,7 @@ $transactionDetails  ??= [];
                                 </tr>
                             <?php else: ?>
                                 <?php foreach ($products as $product): ?>
-                                    <tr>
+                                    <tr class="product-row">
                                         <td>
                                             <strong><?= e($product['name']) ?></strong>
                                             <?php if (!empty($product['description'])): ?>
@@ -82,8 +100,8 @@ $transactionDetails  ??= [];
         </div>
 
         <!-- Keranjang -->
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <div class="card modern-card">
+            <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center pt-4 px-4">
                 <h5 class="mb-0"><i class="bi bi-cart4"></i> Keranjang</h5>
                 <?php if (!empty($cart)): ?>
                     <span class="badge bg-light text-success">
@@ -119,7 +137,22 @@ $transactionDetails  ??= [];
                                             <strong><?= e($item['name']) ?></strong>
                                             <br><small class="text-muted"><?= formatRupiah($item['price']) ?>/pcs</small>
                                         </td>
-                                        <td class="text-center align-middle"><?= $item['quantity'] ?></td>
+                                        <td class="text-center align-middle">
+                                            <form action="<?= url('/kasir/transaction/update') ?>" method="POST" class="d-flex justify-content-center gap-1">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="product_id" value="<?= e((string) $item['product_id']) ?>">
+                                                <input type="number"
+                                                       name="quantity"
+                                                       class="form-control form-control-sm"
+                                                       value="<?= e((string) $item['quantity']) ?>"
+                                                       min="1"
+                                                       style="width: 64px;"
+                                                       required>
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-arrow-repeat"></i>
+                                                </button>
+                                            </form>
+                                        </td>
                                         <td class="text-end align-middle fw-semibold text-success">
                                             <?= formatRupiah($item['subtotal']) ?>
                                         </td>
@@ -147,32 +180,92 @@ $transactionDetails  ??= [];
                     </div>
 
                     <!-- Tombol Aksi -->
-                    <div class="card-footer bg-white d-flex gap-2">
-                        <form action="<?= url('/kasir/transaction/checkout') ?>" method="POST" class="flex-grow-1">
+                    <div class="card-footer bg-white">
+                        <form action="<?= url('/kasir/transaction/checkout') ?>" method="POST" class="mb-2">
                             <?= csrf_field() ?>
+                            <input type="hidden" id="cartTotal" value="<?= e((string) $grandTotal) ?>">
+                            <div class="mb-2">
+                                <label for="paidAmount" class="form-label small fw-semibold">Uang Dibayar</label>
+                                <input type="number"
+                                       class="form-control"
+                                       id="paidAmount"
+                                       name="paid_amount"
+                                       min="<?= e((string) $grandTotal) ?>"
+                                       step="100"
+                                       required
+                                       placeholder="Masukkan nominal pembayaran">
+                            </div>
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary quick-cash" data-amount="<?= e((string) $grandTotal) ?>">
+                                    Pas
+                                </button>
+                                <?php
+                                $quickCashOptions = [20000, 50000, 100000, 150000, 200000];
+                                foreach ($quickCashOptions as $amount):
+                                    if ($amount < $grandTotal) {
+                                        continue;
+                                    }
+                                ?>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary quick-cash" data-amount="<?= $amount ?>">
+                                        <?= formatRupiah($amount) ?>
+                                    </button>
+                                <?php endforeach; ?>
+                            </div>
+                            <div class="alert alert-info py-2 mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>Total</span>
+                                    <strong><?= formatRupiah($grandTotal) ?></strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Kembalian</span>
+                                    <strong id="changePreview">Rp 0</strong>
+                                </div>
+                            </div>
                             <button type="submit" class="btn btn-success w-100">
                                 <i class="bi bi-check-circle"></i> Bayar Sekarang
                             </button>
                         </form>
-                        <form action="<?= url('/kasir/transaction/clear') ?>" method="POST">
-                            <?= csrf_field() ?>
-                            <button type="submit" class="btn btn-outline-secondary"
-                                    onclick="return confirm('Kosongkan keranjang?')">
-                                <i class="bi bi-x-circle"></i> Clear
-                            </button>
-                        </form>
+                        <div class="d-flex gap-2">
+                            <?php if ($lastTransactionId): ?>
+                                <a href="<?= url('/kasir/transaction/receipt') ?>?id=<?= e((string) $lastTransactionId) ?>"
+                                   class="btn btn-outline-primary flex-grow-1">
+                                    <i class="bi bi-printer"></i> Cetak Struk Terakhir
+                                </a>
+                            <?php endif; ?>
+                            <form action="<?= url('/kasir/transaction/clear') ?>" method="POST" class="ms-auto">
+                                <?= csrf_field() ?>
+                                <button type="submit" class="btn btn-outline-secondary"
+                                        onclick="return confirm('Kosongkan keranjang?')">
+                                    <i class="bi bi-x-circle"></i> Clear
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 <?php endif; ?>
             </div>
         </div>
+
+        <?php if (empty($cart) && $lastTransactionId): ?>
+            <div class="d-grid mt-3">
+                <a href="<?= url('/kasir/transaction/receipt') ?>?id=<?= e((string) $lastTransactionId) ?>"
+                   class="btn btn-outline-primary">
+                    <i class="bi bi-printer"></i> Cetak Struk Transaksi Terakhir
+                </a>
+            </div>
+        <?php endif; ?>
     </div>
 
     <!-- Kolom Kanan: Riwayat Transaksi -->
     <div class="col-lg-7">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <div class="card modern-card">
+            <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center pt-4 px-4">
                 <h5 class="mb-0"><i class="bi bi-clock-history"></i> Riwayat Transaksi Hari Ini</h5>
-                <span class="badge bg-light text-dark"><?= count($transactions) ?> transaksi</span>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="<?= url('/report/daily/export') ?>" class="btn btn-sm btn-light">
+                        <i class="bi bi-download"></i> CSV
+                    </a>
+                    <span class="badge bg-light text-dark"><?= count($transactions) ?> transaksi</span>
+                </div>
             </div>
             <div class="card-body p-0">
                 <?php if (empty($transactions)): ?>
@@ -188,6 +281,8 @@ $transactionDetails  ??= [];
                                     <th>Kode</th>
                                     <th>Kasir</th>
                                     <th class="text-end">Total</th>
+                                    <th class="text-end">Bayar</th>
+                                    <th class="text-end">Kembali</th>
                                     <th class="text-center">Waktu</th>
                                     <th class="text-center">Aksi</th>
                                 </tr>
@@ -200,15 +295,25 @@ $transactionDetails  ??= [];
                                         <td class="text-end fw-bold text-success">
                                             <?= formatRupiah($trx['total_price']) ?>
                                         </td>
+                                        <td class="text-end">
+                                            <?= formatRupiah($trx['paid_amount'] ?? 0) ?>
+                                        </td>
+                                        <td class="text-end">
+                                            <?= formatRupiah($trx['change_amount'] ?? 0) ?>
+                                        </td>
                                         <td class="text-center text-muted small">
                                             <?= date('H:i', strtotime($trx['created_at'])) ?>
                                         </td>
                                         <td class="text-center">
-                                            <button class="btn btn-sm btn-outline-primary" type="button"
+                                            <button class="btn btn-sm btn-outline-primary mb-1" type="button"
                                                     data-bs-toggle="collapse"
                                                     data-bs-target="#detail-<?= $trx['id'] ?>">
                                                 <i class="bi bi-eye"></i>
                                             </button>
+                                            <a href="<?= url('/kasir/transaction/receipt') ?>?id=<?= e((string) $trx['id']) ?>"
+                                               class="btn btn-sm btn-outline-secondary mb-1">
+                                                <i class="bi bi-printer"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                     <!-- Detail transaksi (collapsible) -->
@@ -216,7 +321,7 @@ $transactionDetails  ??= [];
                                     $details = $transactionDetails[$trx['id']] ?? [];
                                     ?>
                                     <tr class="collapse" id="detail-<?= $trx['id'] ?>">
-                                        <td colspan="5" class="bg-light p-3">
+                                        <td colspan="7" class="bg-light p-3">
                                             <strong>Detail:</strong>
                                             <ul class="mb-0 mt-1">
                                                 <?php foreach ($details as $detail): ?>
@@ -239,3 +344,46 @@ $transactionDetails  ??= [];
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const paidInput = document.getElementById('paidAmount');
+    const totalInput = document.getElementById('cartTotal');
+    const changePreview = document.getElementById('changePreview');
+    const productSearch = document.getElementById('productSearch');
+    const productRows = document.querySelectorAll('.product-row');
+
+    const formatter = new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0
+    });
+
+    function updateChangePreview() {
+        const total = Number(totalInput.value || 0);
+        const paid = Number(paidInput.value || 0);
+        const change = Math.max(paid - total, 0);
+        changePreview.textContent = formatter.format(change);
+    }
+
+    if (paidInput && totalInput && changePreview) {
+        paidInput.addEventListener('input', updateChangePreview);
+
+        document.querySelectorAll('.quick-cash').forEach(function (button) {
+            button.addEventListener('click', function () {
+                paidInput.value = button.dataset.amount || '';
+                updateChangePreview();
+            });
+        });
+    }
+
+    if (productSearch) {
+        productSearch.addEventListener('input', function () {
+            const keyword = productSearch.value.toLowerCase();
+            productRows.forEach(function (row) {
+                row.style.display = row.textContent.toLowerCase().includes(keyword) ? '' : 'none';
+            });
+        });
+    }
+});
+</script>
