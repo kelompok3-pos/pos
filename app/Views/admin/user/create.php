@@ -2,11 +2,18 @@
 <!-- ADMIN: FORM TAMBAH USER -->
 <!-- ============================================================ -->
 
+<div class="page-hero">
+    <div class="page-title">
+        <h2><i class="bi bi-person-plus text-primary"></i> Tambah User</h2>
+        <p>Buat akun kasir<?= !empty($canCreateAdmin) ? ' atau admin' : '' ?> dengan hak akses yang sesuai.</p>
+    </div>
+</div>
+
 <div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="bi bi-person-plus"></i> Tambah User Baru</h5>
+    <div class="col-md-7 col-lg-6">
+        <div class="card modern-card">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h5 class="mb-0 fw-bold text-dark">Informasi Akun</h5>
             </div>
             <div class="card-body">
                 <form action="<?= url('/admin/user/store') ?>" method="POST">
@@ -29,15 +36,17 @@
                     <div class="mb-3">
                         <label for="password" class="form-label">Password <span class="text-danger">*</span></label>
                         <input type="password" class="form-control" id="password" name="password"
-                               required minlength="6"
-                               placeholder="Minimal 6 karakter">
+                               required minlength="8"
+                               placeholder="Minimal 8 karakter">
                     </div>
 
                     <div class="mb-3">
                         <label for="role" class="form-label">Role / Jabatan <span class="text-danger">*</span></label>
                         <select class="form-select" id="role" name="role" required>
                             <option value="kasir" selected>Kasir</option>
-                            <option value="admin">Admin</option>
+                            <?php if (!empty($canCreateAdmin)): ?>
+                                <option value="admin">Admin</option>
+                            <?php endif; ?>
                         </select>
                     </div>
 

@@ -2,26 +2,26 @@
 <!-- ADMIN: MANAJEMEN USER -->
 <!-- ============================================================ -->
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
+<div class="page-hero">
+    <div class="page-title">
         <h2 class="fw-bold text-dark m-0">
             <i class="bi bi-people-fill text-primary"></i> Manajemen User
         </h2>
-        <p class="text-muted mb-0">Kelola akun administrator dan kasir aktif</p>
+        <p class="text-muted mb-0">Kelola akun tim aktif sesuai hak akses</p>
     </div>
     <a href="<?= url('/admin/user/create') ?>" class="btn btn-primary">
         <i class="bi bi-person-plus"></i> Tambah User
     </a>
 </div>
 
-<div class="card border-0 shadow-sm">
+<div class="card modern-card">
     <div class="card-header bg-light py-3 border-0 d-flex align-items-center justify-content-between">
         <h5 class="mb-0 fw-bold text-dark">
             <i class="bi bi-shield-lock me-1"></i> Daftar Akun Aktif
         </h5>
         <div class="position-relative" style="width: 250px;">
             <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-            <input type="text" class="form-control ps-5 rounded" id="searchUser" placeholder="Cari nama atau email...">
+            <input type="text" class="form-control ps-5" id="searchUser" placeholder="Cari nama atau email...">
         </div>
     </div>
     <div class="table-responsive">
@@ -46,18 +46,28 @@
                     </tr>
                 <?php else: ?>
                     <?php foreach ($users as $index => $u): ?>
+                        <?php
+                            $isCurrentUser = (int) $u['id'] === (int) ($_SESSION['user']['id'] ?? 0);
+                            $canDeleteUser = !$isCurrentUser
+                                && $u['role'] !== 'super_admin'
+                                && ($u['role'] !== 'admin' || isSuperAdmin());
+                        ?>
                         <tr>
                             <td class="text-muted"><?= $index + 1 ?></td>
                             <td class="fw-semibold"><?= e($u['name']) ?></td>
                             <td class="text-muted"><?= e($u['email']) ?></td>
                             <td>
-                                <?php if ($u['role'] === 'admin'): ?>
+                                <?php if ($u['role'] === 'super_admin'): ?>
+                                    <span class="badge bg-dark">
+                                        <i class="bi bi-shield-lock me-1"></i> <?= e(roleLabel($u['role'])) ?>
+                                    </span>
+                                <?php elseif ($u['role'] === 'admin'): ?>
                                     <span class="badge bg-primary">
-                                        <i class="bi bi-shield-shaded me-1"></i> Admin
+                                        <i class="bi bi-shield-shaded me-1"></i> <?= e(roleLabel($u['role'])) ?>
                                     </span>
                                 <?php else: ?>
                                     <span class="badge bg-success">
-                                        <i class="bi bi-person-badge me-1"></i> Kasir
+                                        <i class="bi bi-person-badge me-1"></i> <?= e(roleLabel($u['role'])) ?>
                                     </span>
                                 <?php endif; ?>
                             </td>
@@ -65,11 +75,21 @@
                                 <?= date('d M Y', strtotime($u['created_at'])) ?>
                             </td>
                             <td class="text-center">
-                                <a href="<?= url('/admin/user/delete') ?>?id=<?= $u['id'] ?>" 
-                                   class="btn btn-sm btn-danger"
-                                   onclick="return confirm('Nonaktifkan user <?= e($u['name']) ?>?')">
-                                    <i class="bi bi-trash"></i>
-                                </a>
+                                <?php if ($canDeleteUser): ?>
+                                    <form action="<?= url('/admin/user/delete') ?>" method="POST" class="d-inline">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="id" value="<?= e((string) $u['id']) ?>">
+                                        <button type="submit"
+                                                class="btn btn-sm btn-danger"
+                                                onclick="return confirm('Nonaktifkan user <?= e($u['name']) ?>?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                <?php else: ?>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled>
+                                        <i class="bi bi-lock"></i>
+                                    </button>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>

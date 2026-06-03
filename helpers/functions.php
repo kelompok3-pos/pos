@@ -142,7 +142,7 @@ function old(string $key, string $default = ''): string
  */
 function keepOldInput(): void
 {
-    $_SESSION['old'] = $_POST;
+    $_SESSION['old'] = array_diff_key($_POST, array_flip(['password', 'csrf_token']));
 }
 
 /**
@@ -205,7 +205,38 @@ function isAuthenticated(): bool
  */
 function isRole(string $role): bool
 {
-    return isAuthenticated() && ($_SESSION['user']['role'] ?? '') === $role;
+    if (!isAuthenticated()) {
+        return false;
+    }
+
+    $currentRole = $_SESSION['user']['role'] ?? '';
+
+    if ($role === 'admin') {
+        return in_array($currentRole, ['admin', 'super_admin'], true);
+    }
+
+    return $currentRole === $role;
+}
+
+/**
+ * Cek apakah user login adalah super admin.
+ */
+function isSuperAdmin(): bool
+{
+    return isAuthenticated() && ($_SESSION['user']['role'] ?? '') === 'super_admin';
+}
+
+/**
+ * Label role yang aman ditampilkan di UI.
+ */
+function roleLabel(?string $role): string
+{
+    return match ($role) {
+        'super_admin' => 'Super Admin',
+        'admin' => 'Admin',
+        'kasir' => 'Kasir',
+        default => '-',
+    };
 }
 
 /**

@@ -67,15 +67,19 @@ class User
      */
     public function create(array $data): bool
     {
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)"
-        );
-        return $stmt->execute([
-            $data['name'],
-            $data['email'],
-            password_hash($data['password'], PASSWORD_DEFAULT),
-            $data['role'] ?? 'kasir',
-        ]);
+        try {
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)"
+            );
+            return $stmt->execute([
+                $data['name'],
+                $data['email'],
+                password_hash($data['password'], PASSWORD_DEFAULT),
+                $data['role'] ?? 'kasir',
+            ]);
+        } catch (PDOException $e) {
+            return false;
+        }
     }
 
     /**
@@ -152,6 +156,27 @@ class User
     public function count(): int
     {
         $stmt = $this->pdo->query("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL");
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Hitung total user aktif berdasarkan daftar role.
+     *
+     * @param array $roles
+     * @return int
+     */
+    public function countByRoles(array $roles): int
+    {
+        if (empty($roles)) {
+            return 0;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($roles), '?'));
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL AND role IN ({$placeholders})"
+        );
+        $stmt->execute($roles);
+
         return (int) $stmt->fetchColumn();
     }
 }
