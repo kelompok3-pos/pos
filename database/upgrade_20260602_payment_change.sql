@@ -1,0 +1,5 @@
+USE pos_db;
+
+ALTER TABLE transactions
+    ADD COLUMN IF NOT EXISTS paid_amount DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER total_price,
+    ADD COLUMN IF NOT EXISTS change_amount DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER paid_amount;
