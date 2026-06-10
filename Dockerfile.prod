@@ -1,0 +1,39 @@
+FROM php:8.2-apache
+
+ENV APP_ENV=production
+
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
+RUN a2enmod rewrite
+
+RUN apt-get update && apt-get install -y \
+    libzip-dev \
+    zip \
+    unzip \
+    && docker-php-ext-install mysqli pdo_mysql pdo zip opcache \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN echo "opcache.enable=1" >> "$PHP_INI_DIR/conf.d/docker-php-ext-opcache.ini" \
+    && echo "opcache.memory_consumption=128" >> "$PHP_INI_DIR/conf.d/docker-php-ext-opcache.ini" \
+    && echo "opcache.interned_strings_buffer=8" >> "$PHP_INI_DIR/conf.d/docker-php-ext-opcache.ini" \
+    && echo "opcache.max_accelerated_files=4000" >> "$PHP_INI_DIR/conf.d/docker-php-ext-opcache.ini" \
+    && echo "opcache.revalidate_freq=60" >> "$PHP_INI_DIR/conf.d/docker-php-ext-opcache.ini" \
+    && echo "opcache.fast_shutdown=1" >> "$PHP_INI_DIR/conf.d/docker-php-ext-opcache.ini"
+
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
+    /etc/apache2/sites-available/*.conf \
+    /etc/apache2/apache2.conf
+
+RUN sed -ri -e 's/AllowOverride None/AllowOverride All/g' \
+    /etc/apache2/apache2.conf
+
+RUN rm -f /var/www/html/index.html
+
+COPY . /var/www/html/
+
+RUN chown -R www-data:www-data /var/www/html/ \
+    && chmod -R 755 /var/www/html/
+
+RUN if [ -d "/var/www/html/storage" ]; then chmod -R 775 /var/www/html/storage; fi
