@@ -90,6 +90,30 @@ C:\xampp\htdocs\POS\
 > 2. Buat database dengan nama `pos_db`
 > 3. Pilih tab **"SQL"**, copy-paste isi file `database/pos_db.sql`, lalu klik **"Go"**
 
+Untuk database lama, jalankan migration store scope:
+
+```bash
+mysql -u root pos_db < database/upgrade_20260610_store_scope.sql
+mysql -u root pos_db < database/upgrade_20260610_dashboard_modules.sql
+mysql -u root pos_db < database/upgrade_20260610_saas_tenants.sql
+```
+
+Buat akun super admin pertama hanya melalui CLI:
+
+```bash
+php database/seed_super_admin.php "Owner Name" owner@example.com "password-min-8"
+```
+
+### SaaS Tenant Ownership
+
+- `super_admin` is the platform owner/developer and can access every tenant.
+- Creating an `admin` from the super-admin panel also creates a new tenant.
+- `store_id` is retained as the tenant foreign key for backward compatibility.
+- Every cashier has an `assigned_admin_id`.
+- Admin-created cashiers are assigned to the creating admin automatically.
+- Super-admin-created cashiers must be assigned to an existing tenant admin.
+- An admin can only list, edit, deactivate, or reset cashiers assigned to that admin.
+
 ### Langkah 4: Setup Environment
 
 1. Copy file `.env.example` menjadi `.env`

@@ -1,0 +1,11 @@
+<div class="page-hero"><div class="page-title"><span class="eyebrow">SECURITY</span><h2>Audit Log</h2><p>Jejak aktivitas append-only seluruh platform.</p></div></div>
+<div class="card surface mb-4"><div class="card-body"><form method="GET" action="<?= url('/superadmin/audit') ?>" class="row g-3 align-items-end">
+  <div class="col-md-3"><label class="form-label">Toko</label><select class="form-input" name="store_id"><option value="">Semua toko</option><?php foreach ($storeOptions as $store): ?><option value="<?= (int) $store['id'] ?>" <?= (int) ($_GET['store_id'] ?? 0) === (int) $store['id'] ? 'selected' : '' ?>><?= e($store['name']) ?></option><?php endforeach; ?></select></div>
+  <div class="col-md-2"><label class="form-label">Aksi</label><input class="form-input" name="action" value="<?= e($_GET['action'] ?? '') ?>" placeholder="CREATE"></div>
+  <div class="col-md-2"><label class="form-label">Dari</label><input class="form-input" type="date" name="from" value="<?= e($_GET['from'] ?? '') ?>"></div>
+  <div class="col-md-2"><label class="form-label">Sampai</label><input class="form-input" type="date" name="to" value="<?= e($_GET['to'] ?? '') ?>"></div>
+  <div class="col-md-3"><button class="btn btn-primary w-100"><i class="ti ti-filter"></i> Terapkan filter</button></div>
+</form></div></div>
+<div class="card surface"><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Waktu</th><th>Toko</th><th>User</th><th>Aksi</th><th>Target</th><th>Perubahan</th><th>IP</th></tr></thead><tbody>
+<?php foreach ($rows as $row): ?><tr><td><?= e($row['created_at']) ?></td><td><?= e($row['store_name'] ?? 'Global') ?></td><td><?= e($row['user_name'] ?? 'System') ?></td><td><span class="status-pill is-muted"><?= e(strtoupper($row['action'])) ?></span></td><td><?= e($row['target_table']) ?> #<?= e((string) $row['target_id']) ?></td><td><details><summary>Lihat data</summary><pre class="audit-json"><?= e($row['new_value'] ?? $row['old_value'] ?? '{}') ?></pre></details></td><td><?= e($row['ip_address'] ?? '-') ?></td></tr><?php endforeach; ?>
+<?php if ($rows === []): ?><tr><td colspan="7" class="text-center py-5 text-muted">Belum ada audit log.</td></tr><?php endif; ?></tbody></table></div></div>

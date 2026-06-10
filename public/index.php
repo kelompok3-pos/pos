@@ -16,7 +16,9 @@
 // 1. Load semua yang dibutuhkan
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../bootstrap/autoload.php';
 require_once __DIR__ . '/../helpers/functions.php';
+require_once __DIR__ . '/../bootstrap/middleware.php';
 
 // 2. Load daftar routes
 require_once __DIR__ . '/../routes.php';
@@ -39,6 +41,12 @@ if (preg_match('#^(.+)/index\.php$#', $scriptName, $m)) {
 if (isset($routes[$url])) {
     $controllerPath = $routes[$url][0];   // contoh: "Admin/AdminProductController"
     $methodName     = $routes[$url][1];   // contoh: "index"
+    $routeOptions   = $routes[$url][2] ?? [];
+
+    requireMethod(...($routeOptions['methods'] ?? ['GET']));
+    if (!empty($routeOptions['roles'])) {
+        requireRole(...$routeOptions['roles']);
+    }
 
     // Load file controller
     require_once __DIR__ . "/../app/Controllers/{$controllerPath}.php";
@@ -47,8 +55,25 @@ if (isset($routes[$url])) {
     $className = basename($controllerPath);  // "AdminProductController"
 
     // Buat instance controller dan panggil method-nya
-    $controller = new $className();
-    $controller->$methodName();
+    try {
+        $controller = new $className();
+        $controller->$methodName();
+    } catch (UnauthorizedException $exception) {
+        if (isApiRequest()) {
+            apiError($exception->getMessage(), 403);
+        }
+        http_response_code(403);
+        require BASE_PATH . '/app/Views/errors/403.php';
+        exit;
+    } catch (Throwable $exception) {
+        error_log($exception->__toString());
+        if (isApiRequest()) {
+            apiError(APP_ENV === 'local' ? $exception->getMessage() : 'Terjadi kesalahan pada server.', 422);
+        }
+        http_response_code(500);
+        require BASE_PATH . '/app/Views/errors/500.php';
+        exit;
+    }
 } else {
     // Route tidak ditemukan — tampilkan halaman 404
     http_response_code(404);

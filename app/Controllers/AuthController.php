@@ -3,19 +3,6 @@
 require_once __DIR__ . '/Controller.php';
 require_once BASE_PATH . '/app/Models/User.php';
 
-/**
- * =================================================================
- * AUTH CONTROLLER
- * =================================================================
- * Controller untuk menangani autentikasi pengguna (login & logout).
- *
- * Routes:
- *   GET  /login                → loginForm()  — Tampilkan form login
- *   POST /login/authenticate   → login()      — Proses login
- *   GET  /logout               → logout()     — Logout
- * =================================================================
- */
-
 class AuthController extends Controller
 {
     private User $userModel;
@@ -62,7 +49,32 @@ class AuthController extends Controller
         }
 
         session_regenerate_id(true);
-        $_SESSION['user'] = $user;
+        regenerateCsrf();
+        $_SESSION['user_id']  = (int) $user['id'];
+        $_SESSION['role']     = $user['role'];
+        $_SESSION['name']     = $user['name'];
+        $_SESSION['store_id'] = ($user['store_id'] ?? null) === null ? null : (int) $user['store_id'];
+
+        // Compatibility for existing views while top-level session keys remain authoritative.
+        $_SESSION['user'] = [
+            'id'       => (int) $user['id'],
+            'name'     => $user['name'],
+            'email'    => $user['email'],
+            'role'     => $user['role'],
+            'store_id' => $_SESSION['store_id'],
+        ];
+        try {
+            $actor = ActorContext::fromSession();
+        } catch (UnauthorizedException) {
+            flash('error', 'Akun atau toko tidak aktif.');
+            $this->redirect('/login');
+        }
+        $this->userModel->touchLastLogin((int) $user['id']);
+        try {
+            AuditLogger::log($actor, 'LOGIN', 'users', (int) $user['id']);
+        } catch (Throwable $exception) {
+            error_log($exception->__toString());
+        }
 
         flash('success', 'Selamat datang, ' . e($user['email']) . '!');
         $this->redirectBasedOnRole();
@@ -73,7 +85,23 @@ class AuthController extends Controller
      */
     public function logout(): void
     {
-        unset($_SESSION['user']);
+        verifyCsrf();
+        try {
+            $actor = ActorContext::fromSession();
+            AuditLogger::log($actor, 'LOGOUT', 'users', $actor->user_id);
+        } catch (Throwable $exception) {
+            error_log($exception->__toString());
+        }
+        unset(
+            $_SESSION['user_id'],
+            $_SESSION['role'],
+            $_SESSION['name'],
+            $_SESSION['store_id'],
+            $_SESSION['user'],
+            $_SESSION['cart'],
+            $_SESSION['last_transaction_id']
+            ,$_SESSION['shift_id']
+        );
         session_regenerate_id(true);
         flash('success', 'Anda berhasil logout.');
         $this->redirect('/login');
@@ -84,12 +112,11 @@ class AuthController extends Controller
      */
     private function redirectBasedOnRole(): void
     {
-        $role = $_SESSION['user']['role'] ?? 'kasir';
-
-        if ($role === 'admin') {
-            $this->redirect('/dashboard');
-        } else {
-            $this->redirect('/dashboard');
-        }
+        $role = currentRole();
+        $this->redirect(match ($role) {
+            'kasir' => '/kasir/transaction',
+            'super_admin', 'superadmin' => '/superadmin/dashboard',
+            default => '/dashboard',
+        });
     }
 }

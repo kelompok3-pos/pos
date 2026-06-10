@@ -21,7 +21,7 @@ class KasirProductController extends Controller
 
     public function __construct()
     {
-        requireRole('kasir');
+        allowOnly(['super_admin', 'admin']);
         $this->productModel = new Product();
     }
 

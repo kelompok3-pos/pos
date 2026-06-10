@@ -1,18 +1,4 @@
 <?php
-
-/**
- * =================================================================
- * MODEL: USER
- * =================================================================
- * Class untuk mengakses tabel `users` di database.
- * Digunakan untuk authentication sederhana (login/register).
- *
- * Cara pakai:
- *   $user = new User();
- *   $data = $user->findByEmail('admin@pos.com');
- * =================================================================
- */
-
 class User
 {
     private PDO $pdo;
@@ -27,9 +13,57 @@ class User
      *
      * @return array
      */
-    public function getAll(): array
+    public function getAll(?int $storeId = null): array
     {
-        $stmt = $this->pdo->query("SELECT id, name, email, role, created_at, updated_at FROM users WHERE deleted_at IS NULL ORDER BY id DESC");
+        $sql = "SELECT u.id, u.name, u.email, u.role, u.store_id, u.created_by, u.assigned_admin_id,
+                       u.created_at, u.updated_at, u.deleted_at,
+                       creator.name AS created_by_name, manager.name AS assigned_admin_name,
+                       tenant.name AS tenant_name
+                FROM users u
+                LEFT JOIN users creator ON u.created_by = creator.id
+                LEFT JOIN users manager ON u.assigned_admin_id = manager.id
+                LEFT JOIN tenants tenant ON u.store_id = tenant.id
+                WHERE 1 = 1";
+        $params = [];
+
+        if ($storeId !== null) {
+            $sql .= " AND u.store_id = ?";
+            $params[] = $storeId;
+        }
+
+        $stmt = $this->pdo->prepare($sql . " ORDER BY u.id DESC");
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getCashiersByAdmin(int $adminId): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT u.id, u.name, u.email, u.role, u.store_id, u.created_by, u.assigned_admin_id,
+                    u.created_at, u.updated_at, u.deleted_at,
+                    creator.name AS created_by_name, manager.name AS assigned_admin_name,
+                    tenant.name AS tenant_name
+             FROM users u
+             LEFT JOIN users creator ON u.created_by = creator.id
+             LEFT JOIN users manager ON u.assigned_admin_id = manager.id
+             LEFT JOIN tenants tenant ON u.store_id = tenant.id
+             WHERE u.role = 'kasir' AND u.assigned_admin_id = ?
+             ORDER BY u.id DESC"
+        );
+        $stmt->execute([$adminId]);
+        return $stmt->fetchAll();
+    }
+
+    public function getActiveAdmins(): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT u.id, u.name, u.email, u.store_id, tenant.name AS tenant_name
+             FROM users u
+             LEFT JOIN tenants tenant ON u.store_id = tenant.id
+             WHERE u.role = 'admin' AND u.deleted_at IS NULL AND u.store_id IS NOT NULL
+             ORDER BY tenant.name ASC, u.name ASC"
+        );
+        $stmt->execute();
         return $stmt->fetchAll();
     }
 
@@ -39,10 +73,19 @@ class User
      * @param int $id
      * @return array|false
      */
-    public function getById(int $id): array|false
+    public function getById(int $id, ?int $storeId = null): array|false
     {
-        $stmt = $this->pdo->prepare("SELECT id, name, email, role, created_at, updated_at FROM users WHERE id = ? AND deleted_at IS NULL");
-        $stmt->execute([$id]);
+        $sql = "SELECT id, name, email, role, store_id, created_by, assigned_admin_id, created_at, updated_at
+                FROM users WHERE id = ? AND deleted_at IS NULL";
+        $params = [$id];
+
+        if ($storeId !== null) {
+            $sql .= " AND store_id = ?";
+            $params[] = $storeId;
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetch();
     }
 
@@ -54,7 +97,11 @@ class User
      */
     public function findByEmail(string $email): array|false
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE email = ? AND deleted_at IS NULL");
+        $hasDeletedAt = $this->hasColumn('users', 'deleted_at');
+        $hasStatus = $this->hasColumn('users', 'status');
+        $where = $hasDeletedAt ? ' AND deleted_at IS NULL' : '';
+        $where .= $hasStatus ? " AND status = 'active'" : '';
+        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE email = ?{$where}");
         $stmt->execute([$email]);
         return $stmt->fetch();
     }
@@ -69,15 +116,53 @@ class User
     {
         try {
             $stmt = $this->pdo->prepare(
-                "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)"
+                "INSERT INTO users (name, email, password, role, store_id, created_by, assigned_admin_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)"
             );
             return $stmt->execute([
                 $data['name'],
                 $data['email'],
                 password_hash($data['password'], PASSWORD_DEFAULT),
                 $data['role'] ?? 'kasir',
+                $data['store_id'] ?? null,
+                $data['created_by'] ?? null,
+                $data['assigned_admin_id'] ?? null,
             ]);
         } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    public function createAdminWithTenant(array $data, string $tenantName, int $createdBy): bool
+    {
+        try {
+            $this->pdo->beginTransaction();
+            $tenantStmt = $this->pdo->prepare(
+                "INSERT INTO tenants (name, created_by) VALUES (?, ?)"
+            );
+            $tenantStmt->execute([$tenantName, $createdBy]);
+            $tenantId = (int) $this->pdo->lastInsertId();
+
+            $created = $this->create([
+                'name'              => $data['name'],
+                'email'             => $data['email'],
+                'password'          => $data['password'],
+                'role'              => 'admin',
+                'store_id'          => $tenantId,
+                'created_by'        => $createdBy,
+                'assigned_admin_id' => null,
+            ]);
+
+            if (!$created) {
+                throw new RuntimeException('Failed to create tenant admin.');
+            }
+
+            $this->pdo->commit();
+            return true;
+        } catch (Throwable $exception) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             return false;
         }
     }
@@ -92,12 +177,14 @@ class User
     public function update(int $id, array $data): bool
     {
         $stmt = $this->pdo->prepare(
-            "UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?"
+            "UPDATE users SET name = ?, email = ?, role = ?, store_id = ?, assigned_admin_id = ? WHERE id = ?"
         );
         return $stmt->execute([
             $data['name'],
             $data['email'],
             $data['role'] ?? 'kasir',
+            $data['store_id'] ?? null,
+            $data['assigned_admin_id'] ?? null,
             $id,
         ]);
     }
@@ -149,15 +236,49 @@ class User
         return false;
     }
 
+    public function touchLastLogin(int $id): void
+    {
+        if (!$this->hasColumn('users', 'last_login')) {
+            return;
+        }
+        $stmt = $this->pdo->prepare('UPDATE users SET last_login = NOW() WHERE id = ?');
+        $stmt->execute([$id]);
+    }
+
+    private function hasColumn(string $table, string $column): bool
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM information_schema.columns
+             WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
+        );
+        $stmt->execute([$table, $column]);
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
     /**
      * Hitung total user aktif
      *
      * @return int
      */
-    public function count(): int
+    public function count(?int $storeId = null): int
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL");
+        $sql = "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL";
+        $params = [];
+
+        if ($storeId !== null) {
+            $sql .= " AND store_id = ?";
+            $params[] = $storeId;
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         return (int) $stmt->fetchColumn();
+    }
+
+    public function activate(int $id): bool
+    {
+        $stmt = $this->pdo->prepare("UPDATE users SET deleted_at = NULL WHERE id = ?");
+        return $stmt->execute([$id]);
     }
 
     /**

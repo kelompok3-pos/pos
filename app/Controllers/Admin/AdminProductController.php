@@ -26,7 +26,7 @@ class AdminProductController extends Controller
 
     public function __construct()
     {
-        requireRole('admin');
+        allowOnly(['admin']);
         $this->productModel = new Product();
     }
 
@@ -35,7 +35,7 @@ class AdminProductController extends Controller
      */
     public function index(): void
     {
-        $products = $this->productModel->getAll();
+        $products = $this->productModel->getAllForManagement();
 
         $this->view('admin/product/index', [
             'title'    => 'Daftar Produk',
@@ -64,6 +64,7 @@ class AdminProductController extends Controller
         $name  = trim($_POST['name'] ?? '');
         $price = (float) ($_POST['price'] ?? -1);
         $stock = (int) ($_POST['stock'] ?? -1);
+        $minimumStock = (int) ($_POST['minimum_stock'] ?? 5);
 
         if ($name === '' || $price < 0 || $stock < 0) {
             flash('error', 'Nama, harga, dan stok produk wajib diisi dengan benar.');
@@ -74,6 +75,7 @@ class AdminProductController extends Controller
             'name'        => $name,
             'price'       => $price,
             'stock'       => $stock,
+            'minimum_stock' => $minimumStock,
             'description' => $_POST['description'] ?? '',
         ]);
 
@@ -93,6 +95,12 @@ class AdminProductController extends Controller
             $this->redirect('/admin/product');
         }
 
+        try {
+            assertBelongsToStore('products', (int) $id, ActorContext::fromSession()->requireStoreId());
+        } catch (UnauthorizedException) {
+            flash('error', 'Produk tidak ditemukan.');
+            $this->redirect('/admin/product');
+        }
         $product = $this->productModel->getById($id);
 
         if (!$product) {
@@ -117,9 +125,16 @@ class AdminProductController extends Controller
         $name  = trim($_POST['name'] ?? '');
         $price = (float) ($_POST['price'] ?? -1);
         $stock = (int) ($_POST['stock'] ?? -1);
+        $minimumStock = (int) ($_POST['minimum_stock'] ?? 5);
 
         if (!$id) {
             flash('error', 'ID produk tidak ditemukan.');
+            $this->redirect('/admin/product');
+        }
+        try {
+            assertBelongsToStore('products', (int) $id, ActorContext::fromSession()->requireStoreId());
+        } catch (UnauthorizedException) {
+            flash('error', 'Produk tidak ditemukan.');
             $this->redirect('/admin/product');
         }
 
@@ -132,6 +147,7 @@ class AdminProductController extends Controller
             'name'        => $name,
             'price'       => $price,
             'stock'       => $stock,
+            'minimum_stock' => $minimumStock,
             'description' => $_POST['description'] ?? '',
         ]);
 
@@ -152,10 +168,65 @@ class AdminProductController extends Controller
             flash('error', 'ID produk tidak ditemukan.');
             $this->redirect('/admin/product');
         }
+        try {
+            assertBelongsToStore('products', (int) $id, ActorContext::fromSession()->requireStoreId());
+        } catch (UnauthorizedException) {
+            flash('error', 'Produk tidak ditemukan.');
+            $this->redirect('/admin/product');
+        }
 
         $this->productModel->delete($id);
 
         flash('success', 'Produk berhasil dihapus!');
+        $this->redirect('/admin/product');
+    }
+
+    public function status(): void
+    {
+        verifyCsrf();
+        $id = (int) ($_POST['id'] ?? 0);
+        $status = $_POST['status'] ?? '';
+        try {
+            assertBelongsToStore('products', $id, ActorContext::fromSession()->requireStoreId());
+        } catch (UnauthorizedException) {
+            flash('error', 'Produk tidak ditemukan.');
+            $this->redirect('/admin/product');
+        }
+        if (!in_array($status, ['active', 'inactive'], true)) {
+            flash('error', 'Status produk tidak valid.');
+        } else {
+            $this->productModel->setStatus($id, $status);
+            flash('success', 'Status produk diperbarui.');
+        }
+        $this->redirect('/admin/product');
+    }
+
+    public function import(): void
+    {
+        verifyCsrf();
+        if (!isset($_FILES['csv']) || $_FILES['csv']['error'] !== UPLOAD_ERR_OK) {
+            flash('error', 'Pilih file CSV yang valid.');
+            $this->redirect('/admin/product');
+        }
+        $handle = fopen($_FILES['csv']['tmp_name'], 'r');
+        $header = fgetcsv($handle);
+        $count = 0;
+        while (($row = fgetcsv($handle)) !== false) {
+            $data = array_combine($header, $row);
+            if (!$data || empty($data['name'])) {
+                continue;
+            }
+            $this->productModel->create([
+                'name' => $data['name'],
+                'price' => (float) ($data['price'] ?? 0),
+                'stock' => (int) ($data['stock'] ?? 0),
+                'minimum_stock' => (int) ($data['minimum_stock'] ?? 5),
+                'description' => $data['description'] ?? '',
+            ]);
+            $count++;
+        }
+        fclose($handle);
+        flash('success', "{$count} produk berhasil diimpor.");
         $this->redirect('/admin/product');
     }
 }

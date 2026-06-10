@@ -1,25 +1,12 @@
 <?php
 
-/**
- * =================================================================
- * MODEL: PRODUCT
- * =================================================================
- * Class untuk mengakses tabel `products` di database.
- *
- * Cara pakai:
- *   $product = new Product();
- *   $semua   = $product->getAll();
- *   $satu    = $product->getById(1);
- * =================================================================
- */
-
 class Product
 {
-    private PDO $pdo;
+    private ProductRepository $repository;
 
     public function __construct()
     {
-        $this->pdo = getConnection();
+        $this->repository = new ProductRepository(getConnection(), ActorContext::fromSession());
     }
 
     /**
@@ -29,8 +16,12 @@ class Product
      */
     public function getAll(): array
     {
-        $stmt = $this->pdo->query("SELECT * FROM products WHERE deleted_at IS NULL ORDER BY id DESC");
-        return $stmt->fetchAll();
+        return $this->repository->active();
+    }
+
+    public function getAllForManagement(): array
+    {
+        return $this->repository->management();
     }
 
     /**
@@ -41,9 +32,7 @@ class Product
      */
     public function getById(int $id): array|false
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id = ? AND deleted_at IS NULL");
-        $stmt->execute([$id]);
-        return $stmt->fetch();
+        return $this->repository->findActiveById($id) ?? false;
     }
 
     /**
@@ -54,16 +43,34 @@ class Product
      */
     public function create(array $data): bool
     {
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO products (name, image, price, stock, description) VALUES (?, ?, ?, ?, ?)"
+        $payload = [
+            'name' => $data['name'],
+            'image' => $data['image'] ?? null,
+            'stock' => $data['stock'],
+        ];
+        $pdo = getConnection();
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*) FROM information_schema.columns
+             WHERE table_schema = DATABASE() AND table_name = 'products' AND column_name = 'selling_price'"
         );
-        return $stmt->execute([
-            $data['name'],
-            $data['image'] ?? null,
-            $data['price'],
-            $data['stock'],
-            $data['description'] ?? '',
-        ]);
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() > 0) {
+            $payload += [
+                'sku' => $data['sku'] ?? generateSKU(),
+                'purchase_price' => $data['purchase_price'] ?? 0,
+                'selling_price' => $data['price'],
+                'min_stock' => $data['minimum_stock'] ?? 5,
+                'unit' => $data['unit'] ?? 'pcs',
+                'status' => 'active',
+            ];
+        } else {
+            $payload += [
+                'price' => $data['price'],
+                'minimum_stock' => $data['minimum_stock'] ?? 5,
+                'description' => $data['description'] ?? '',
+            ];
+        }
+        return $this->repository->insert($payload) > 0;
     }
 
     /**
@@ -75,30 +82,18 @@ class Product
      */
     public function update(int $id, array $data): bool
     {
-        if (array_key_exists('image', $data)) {
-            $stmt = $this->pdo->prepare(
-                "UPDATE products SET name = ?, image = ?, price = ?, stock = ?, description = ? WHERE id = ?"
-            );
-            return $stmt->execute([
-                $data['name'],
-                $data['image'],
-                $data['price'],
-                $data['stock'],
-                $data['description'] ?? '',
-                $id,
-            ]);
-        }
-
-        $stmt = $this->pdo->prepare(
-            "UPDATE products SET name = ?, price = ?, stock = ?, description = ? WHERE id = ?"
+        $pdo = getConnection();
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*) FROM information_schema.columns
+             WHERE table_schema = DATABASE() AND table_name = 'products' AND column_name = 'selling_price'"
         );
-        return $stmt->execute([
-            $data['name'],
-            $data['price'],
-            $data['stock'],
-            $data['description'] ?? '',
-            $id,
-        ]);
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() > 0) {
+            $data['selling_price'] = $data['price'] ?? $data['selling_price'] ?? 0;
+            $data['min_stock'] = $data['minimum_stock'] ?? $data['min_stock'] ?? 0;
+            unset($data['price'], $data['minimum_stock'], $data['description']);
+        }
+        return $this->repository->update($id, $data);
     }
 
     /**
@@ -110,8 +105,7 @@ class Product
      */
     public function updateImage(int $id, ?string $image): bool
     {
-        $stmt = $this->pdo->prepare("UPDATE products SET image = ? WHERE id = ?");
-        return $stmt->execute([$image, $id]);
+        return $this->repository->update($id, ['image' => $image]);
     }
 
     /**
@@ -122,8 +116,17 @@ class Product
      */
     public function delete(int $id): bool
     {
-        $stmt = $this->pdo->prepare("UPDATE products SET deleted_at = NOW() WHERE id = ?");
-        return $stmt->execute([$id]);
+        return $this->repository->softDelete($id);
+    }
+
+    public function setStatus(int $id, string $status): bool
+    {
+        return $this->repository->update($id, ['status' => $status]);
+    }
+
+    public function adjustStock(int $id, int $delta): bool
+    {
+        return $this->repository->adjustStock($id, $delta);
     }
 
     /**
@@ -135,10 +138,7 @@ class Product
      */
     public function reduceStock(int $id, int $quantity): bool
     {
-        $stmt = $this->pdo->prepare(
-            "UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ? AND deleted_at IS NULL"
-        );
-        return $stmt->execute([$quantity, $id, $quantity]);
+        return $this->repository->adjustStock($id, -$quantity);
     }
 
     /**
@@ -148,8 +148,7 @@ class Product
      */
     public function count(): int
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM products WHERE deleted_at IS NULL");
-        return (int) $stmt->fetchColumn();
+        return $this->repository->countActiveRecords();
     }
 
     /**
@@ -159,8 +158,7 @@ class Product
      */
     public function totalStock(): int
     {
-        $stmt = $this->pdo->query("SELECT COALESCE(SUM(stock), 0) FROM products WHERE deleted_at IS NULL");
-        return (int) $stmt->fetchColumn();
+        return $this->repository->totalStock();
     }
 
     /**
@@ -171,10 +169,6 @@ class Product
      */
     public function getLowStock(int $threshold = 5): array
     {
-        $stmt = $this->pdo->prepare(
-            "SELECT * FROM products WHERE stock <= ? AND deleted_at IS NULL ORDER BY stock ASC, name ASC"
-        );
-        $stmt->execute([$threshold]);
-        return $stmt->fetchAll();
+        return $this->repository->lowStock($threshold);
     }
 }

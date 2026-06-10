@@ -3,10 +3,14 @@
 class Transaction
 {
     private PDO $pdo;
+    private ?int $storeId;
+    private ActorContext $actor;
 
     public function __construct()
     {
         $this->pdo = getConnection();
+        $this->actor = ActorContext::fromSession();
+        $this->storeId = $this->actor->store_id;
     }
 
     /**
@@ -16,12 +20,17 @@ class Transaction
      */
     public function getAll(): array
     {
-        $stmt = $this->pdo->query(
+        if ($this->hasColumn('transactions', 'total')) {
+            return $this->retailTransactions();
+        }
+        $stmt = $this->pdo->prepare(
             "SELECT t.*, u.name AS cashier_name
              FROM transactions t
              LEFT JOIN users u ON t.cashier_id = u.id
+             WHERE (? IS NULL OR t.store_id = ?)
              ORDER BY t.id DESC"
         );
+        $stmt->execute([$this->storeId, $this->storeId]);
         return $stmt->fetchAll();
     }
 
@@ -32,14 +41,18 @@ class Transaction
      */
     public function getToday(): array
     {
+        if ($this->hasColumn('transactions', 'total')) {
+            return $this->retailTransactions('DATE(t.created_at) = CURDATE()');
+        }
         $stmt = $this->pdo->prepare(
             "SELECT t.*, u.name AS cashier_name
              FROM transactions t
              LEFT JOIN users u ON t.cashier_id = u.id
              WHERE DATE(t.created_at) = CURDATE()
+               AND (? IS NULL OR t.store_id = ?)
              ORDER BY t.id DESC"
         );
-        $stmt->execute();
+        $stmt->execute([$this->storeId, $this->storeId]);
         return $stmt->fetchAll();
     }
 
@@ -51,33 +64,56 @@ class Transaction
      */
     public function getById(int $id): array|false
     {
+        if ($this->hasColumn('transactions', 'total')) {
+            $stmt = $this->pdo->prepare(
+                "SELECT t.*, t.kasir_id AS cashier_id, t.total AS total_price,
+                        t.cash_received AS paid_amount, u.name AS cashier_name,
+                        pm.type AS payment_method
+                 FROM transactions t
+                 LEFT JOIN users u ON t.kasir_id = u.id
+                 LEFT JOIN payment_methods pm ON pm.id = t.payment_method_id
+                 WHERE t.id = ? AND (? IS NULL OR t.store_id = ?)"
+            );
+            $stmt->execute([$id, $this->storeId, $this->storeId]);
+            return $stmt->fetch();
+        }
         $stmt = $this->pdo->prepare(
             "SELECT t.*, u.name AS cashier_name
              FROM transactions t
              LEFT JOIN users u ON t.cashier_id = u.id
-             WHERE t.id = ?"
+             WHERE t.id = ?
+               AND (? IS NULL OR t.store_id = ?)"
         );
-        $stmt->execute([$id]);
+        $stmt->execute([$id, $this->storeId, $this->storeId]);
         return $stmt->fetch();
     }
 
     public function getDetails(int $transactionId): array
     {
         $stmt = $this->pdo->prepare(
-            "SELECT * FROM transaction_items WHERE transaction_id = ?"
+            "SELECT ti.*
+             FROM transaction_items ti
+             INNER JOIN transactions t ON ti.transaction_id = t.id
+             WHERE ti.transaction_id = ?
+               AND (? IS NULL OR t.store_id = ?)"
         );
-        $stmt->execute([$transactionId]);
+        $stmt->execute([$transactionId, $this->storeId, $this->storeId]);
         return $stmt->fetchAll();
     }
     
-    /**
-     * Mengambil ringkasan data statistik untuk kartu dashboard
-     */
     public function getDashboardStats(): array
     {
-        $totalProduk = $this->pdo->query("SELECT SUM(quantity) AS total FROM transaction_items")->fetchColumn() ?? 0;
-        $totalPenjualan = $this->pdo->query("SELECT SUM(total_price) AS total FROM transactions")->fetchColumn() ?? 0;
-        $totalTransaksi = $this->pdo->query("SELECT COUNT(*) AS total FROM transactions")->fetchColumn() ?? 0;
+        $scope = $this->storeId === null ? '' : ' WHERE store_id = ?';
+        $params = $this->storeId === null ? [] : [$this->storeId];
+        $stmtItems = $this->pdo->prepare("SELECT COALESCE(SUM(quantity), 0) FROM transaction_items{$scope}");
+        $stmtItems->execute($params);
+        $stmtSales = $this->pdo->prepare("SELECT COALESCE(SUM(total_price), 0) FROM transactions{$scope}");
+        $stmtSales->execute($params);
+        $stmtCount = $this->pdo->prepare("SELECT COUNT(*) FROM transactions{$scope}");
+        $stmtCount->execute($params);
+        $totalProduk = $stmtItems->fetchColumn();
+        $totalPenjualan = $stmtSales->fetchColumn();
+        $totalTransaksi = $stmtCount->fetchColumn();
 
         return [
             'total_produk'    => $totalProduk,
@@ -91,17 +127,21 @@ class Transaction
      */
     public function getSalesChartData(): array
     {
-        return $this->pdo->query("
+        $stmt = $this->pdo->prepare("
             SELECT
-                DATE_FORMAT(created_at, '%b %Y') AS bulan_label,
-                DATE_FORMAT(created_at, '%Y-%m') AS bulan_sort,
-                SUM(total_price) AS total,
+                DATE_FORMAT(t.created_at, '%b %Y') AS bulan_label,
+                DATE_FORMAT(t.created_at, '%Y-%m') AS bulan_sort,
+                SUM(t.total_price) AS total,
                 COUNT(*) AS jumlah_transaksi
-            FROM transactions
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+            FROM transactions t
+            INNER JOIN users u ON t.cashier_id = u.id
+            WHERE t.created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+              AND (? IS NULL OR t.store_id = ?)
             GROUP BY bulan_sort, bulan_label
             ORDER BY bulan_sort ASC
-        ")->fetchAll();
+        ");
+        $stmt->execute([$this->storeId, $this->storeId]);
+        return $stmt->fetchAll();
     }
 
     /**
@@ -111,18 +151,87 @@ class Transaction
     {
         $stmt = $this->pdo->prepare("
             SELECT
-                DATE(created_at) AS date_sort,
-                DATE_FORMAT(created_at, '%d %b') AS date_label,
-                SUM(total_price) AS total,
+                DATE(transactions.created_at) AS date_sort,
+                DATE_FORMAT(transactions.created_at, '%d %b') AS date_label,
+                SUM(transactions.total_price) AS total,
                 COUNT(*) AS jumlah_transaksi,
-                COALESCE(SUM(paid_amount), 0) AS total_dibayar,
-                COALESCE(SUM(change_amount), 0) AS total_kembalian
+                COALESCE(SUM(transactions.paid_amount), 0) AS total_dibayar,
+                COALESCE(SUM(transactions.change_amount), 0) AS total_kembalian
             FROM transactions
-            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+            INNER JOIN users u ON transactions.cashier_id = u.id
+            WHERE transactions.created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+              AND (? IS NULL OR transactions.store_id = ?)
             GROUP BY date_sort, date_label
             ORDER BY date_sort ASC
         ");
-        $stmt->execute([$days - 1]);
+        $stmt->execute([$days - 1, $this->storeId, $this->storeId]);
+        return $stmt->fetchAll();
+    }
+
+    public function getByDateRange(string $from, string $to): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT t.*, u.name AS cashier_name
+             FROM transactions t
+             INNER JOIN users u ON t.cashier_id = u.id
+             WHERE DATE(t.created_at) BETWEEN ? AND ?
+               AND (? IS NULL OR t.store_id = ?)
+             ORDER BY t.id DESC"
+        );
+        $stmt->execute([$from, $to, $this->storeId, $this->storeId]);
+        return $stmt->fetchAll();
+    }
+
+    public function revenueByDateRange(string $from, string $to): float
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT COALESCE(SUM(t.total_price), 0)
+             FROM transactions t
+             INNER JOIN users u ON t.cashier_id = u.id
+             WHERE DATE(t.created_at) BETWEEN ? AND ?
+               AND (? IS NULL OR t.store_id = ?)"
+        );
+        $stmt->execute([$from, $to, $this->storeId, $this->storeId]);
+        return (float) $stmt->fetchColumn();
+    }
+
+    public function getByCashier(int $cashierId, string $date = ''): array
+    {
+        if ($this->hasColumn('transactions', 'total')) {
+            $condition = 't.kasir_id = ?';
+            $params = [$cashierId];
+            if ($date !== '') {
+                $condition .= ' AND DATE(t.created_at) = ?';
+                $params[] = $date;
+            }
+            return $this->retailTransactions($condition, $params);
+        }
+        $sql = "SELECT t.*, u.name AS cashier_name
+                FROM transactions t
+                INNER JOIN users u ON t.cashier_id = u.id
+                WHERE t.cashier_id = ?
+                  AND (? IS NULL OR t.store_id = ?)";
+        $params = [$cashierId, $this->storeId, $this->storeId];
+        if ($date !== '') {
+            $sql .= " AND DATE(t.created_at) = ?";
+            $params[] = $date;
+        }
+        $stmt = $this->pdo->prepare($sql . " ORDER BY t.id DESC");
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getCashierPerformance(string $from, string $to): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT u.name, COUNT(t.id) AS transaction_count, COALESCE(SUM(t.total_price), 0) AS revenue
+             FROM users u
+             LEFT JOIN transactions t ON t.cashier_id = u.id AND DATE(t.created_at) BETWEEN ? AND ?
+             WHERE u.role = 'kasir' AND u.deleted_at IS NULL
+               AND (? IS NULL OR u.store_id = ?)
+             GROUP BY u.id, u.name ORDER BY revenue DESC"
+        );
+        $stmt->execute([$from, $to, $this->storeId, $this->storeId]);
         return $stmt->fetchAll();
     }
 
@@ -131,13 +240,30 @@ class Transaction
      */
     public function getRecentTransactions(): array
     {
-        return $this->pdo->query("
-            SELECT t.transaction_code, t.total_price, t.created_at, u.name AS cashier
+        if ($this->hasColumn('transactions', 'total')) {
+            $stmt = $this->pdo->prepare(
+                "SELECT t.id, CONCAT('TRX-', LPAD(t.id, 6, '0')) AS transaction_code,
+                        t.total AS total_price, t.cash_received AS paid_amount,
+                        t.change_amount, t.created_at, u.name AS cashier_name
+                 FROM transactions t
+                 JOIN users u ON t.kasir_id = u.id
+                 WHERE (? IS NULL OR t.store_id = ?)
+                 ORDER BY t.created_at DESC LIMIT 5"
+            );
+            $stmt->execute([$this->storeId, $this->storeId]);
+            return $stmt->fetchAll();
+        }
+        $stmt = $this->pdo->prepare("
+            SELECT t.id, t.transaction_code, t.total_price, t.paid_amount,
+                   t.change_amount, t.created_at, u.name AS cashier_name
             FROM transactions t
             JOIN users u ON t.cashier_id = u.id
+            WHERE (? IS NULL OR t.store_id = ?)
             ORDER BY t.created_at DESC
             LIMIT 5
-        ")->fetchAll();
+        ");
+        $stmt->execute([$this->storeId, $this->storeId]);
+        return $stmt->fetchAll();
     }
 
     /**
@@ -145,13 +271,18 @@ class Transaction
      */
     public function getTopSellingProducts(): array
     {
-        return $this->pdo->query("
-            SELECT product_name, SUM(quantity) AS total_terjual, SUM(subtotal) AS total_omzet
-            FROM transaction_items
-            GROUP BY product_name
+        $stmt = $this->pdo->prepare("
+            SELECT ti.product_name, SUM(ti.quantity) AS total_terjual, SUM(ti.subtotal) AS total_omzet
+            FROM transaction_items ti
+            INNER JOIN transactions t ON ti.transaction_id = t.id
+            INNER JOIN users u ON t.cashier_id = u.id
+            WHERE (? IS NULL OR t.store_id = ?)
+            GROUP BY ti.product_name
             ORDER BY total_terjual DESC
             LIMIT 5
-        ")->fetchAll();
+        ");
+        $stmt->execute([$this->storeId, $this->storeId]);
+        return $stmt->fetchAll();
     }
 
     /**
@@ -162,33 +293,69 @@ class Transaction
      * @param float $paidAmount  Amount paid by customer
      * @return int|false         New transaction ID, or false on failure
      */
-    public function create(int $cashierId, array $items, float $paidAmount): int|false
+    public function create(int $cashierId, array $items, float $paidAmount, float $taxPercentage = 0, string $paymentMethod = 'cash'): int|false
     {
         if (empty($items)) {
             return false;
         }
-
-        // Calculate total price
-        $totalPrice = array_reduce($items, fn($sum, $item) => $sum + $item['subtotal'], 0);
-        $changeAmount = $paidAmount - $totalPrice;
-
-        if ($paidAmount < $totalPrice) {
-            return false;
+        if ($this->hasColumn('transactions', 'payment_method_id')) {
+            try {
+                $lookup = $this->pdo->prepare(
+                    'SELECT id FROM payment_methods
+                     WHERE is_active = 1 AND (LOWER(name) = ? OR LOWER(type) = ?) ORDER BY id LIMIT 1'
+                );
+                $lookup->execute([strtolower($paymentMethod), strtolower($paymentMethod)]);
+                $paymentMethodId = (int) $lookup->fetchColumn();
+                if ($paymentMethodId <= 0) {
+                    throw new RuntimeException('Metode pembayaran tidak tersedia.');
+                }
+                return (new RetailTransactionService($this->pdo, $this->actor))->submit([
+                    'items' => array_map(static fn(array $item): array => [
+                        'product_id' => (int) $item['product_id'],
+                        'qty' => (int) $item['quantity'],
+                        'item_discount' => 0,
+                    ], $items),
+                    'transaction_discount' => 0,
+                    'payment_method_id' => $paymentMethodId,
+                    'cash_received' => $paidAmount,
+                ]);
+            } catch (Throwable $exception) {
+                error_log($exception->__toString());
+                return false;
+            }
         }
-
-        // Generate transaction code: TRX-YYYYMM-NNN
-        $code = $this->generateTransactionCode();
+        $storeId = $this->actor->requireStoreId();
 
         try {
             $this->pdo->beginTransaction();
 
+            $stmtCashier = $this->pdo->prepare(
+                "SELECT id FROM users
+                 WHERE id = ? AND store_id = ? AND role IN ('admin', 'kasir') AND deleted_at IS NULL
+                 FOR UPDATE"
+            );
+            $stmtCashier->execute([$cashierId, $storeId]);
+            if (!$stmtCashier->fetchColumn()) {
+                throw new UnauthorizedException('Cashier does not belong to the current store.');
+            }
+
             $stmtStock = $this->pdo->prepare(
-                "SELECT stock FROM products WHERE id = ? AND deleted_at IS NULL FOR UPDATE"
+                "SELECT id, name, price, stock FROM products
+                 WHERE id = ? AND store_id = ? AND status = 'active' AND deleted_at IS NULL
+                 FOR UPDATE"
             );
             $stmtReduce = $this->pdo->prepare(
-                "UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?"
+                "UPDATE products SET stock = stock - ?
+                 WHERE id = ? AND store_id = ? AND stock >= ? AND deleted_at IS NULL"
+            );
+            $stmtMovement = $this->pdo->prepare(
+                "INSERT INTO stock_movements
+                 (store_id, product_id, user_id, movement_type, quantity, stock_before, stock_after, note)
+                 VALUES (?, ?, ?, 'sale', ?, ?, ?, ?)"
             );
 
+            $stockBefore = [];
+            $trustedItems = [];
             foreach ($items as $item) {
                 $productId = (int) ($item['product_id'] ?? 0);
                 $quantity  = (int) ($item['quantity'] ?? 0);
@@ -197,49 +364,99 @@ class Transaction
                     throw new RuntimeException('Item transaksi tidak valid.');
                 }
 
-                $stmtStock->execute([$productId]);
-                $stock = $stmtStock->fetchColumn();
+                $stmtStock->execute([$productId, $storeId]);
+                $product = $stmtStock->fetch();
 
-                if ($stock === false || (int) $stock < $quantity) {
+                if (!$product || (int) $product['stock'] < $quantity) {
                     throw new RuntimeException('Stok produk tidak mencukupi.');
                 }
+                $stockBefore[$productId] = (int) $product['stock'];
+                $trustedItems[] = [
+                    'product_id' => $productId,
+                    'name' => (string) $product['name'],
+                    'price' => (float) $product['price'],
+                    'quantity' => $quantity,
+                    'subtotal' => (float) $product['price'] * $quantity,
+                ];
             }
 
-            // Insert transaction header
+            $subtotal = array_reduce($trustedItems, fn(float $sum, array $item): float => $sum + $item['subtotal'], 0.0);
+            $taxAmount = round($subtotal * max($taxPercentage, 0) / 100, 2);
+            $totalPrice = $subtotal + $taxAmount;
+            if ($paymentMethod !== 'cash') {
+                $paidAmount = $totalPrice;
+            }
+            if ($paidAmount < $totalPrice) {
+                throw new RuntimeException('Uang dibayar kurang.');
+            }
+            $changeAmount = $paidAmount - $totalPrice;
+            $code = $this->generateTransactionCode($storeId);
+
             $stmt = $this->pdo->prepare(
-                "INSERT INTO transactions (transaction_code, cashier_id, total_price, paid_amount, change_amount)
-                 VALUES (?, ?, ?, ?, ?)"
+                "INSERT INTO transactions
+                 (store_id, transaction_code, cashier_id, subtotal, tax_amount, total_price, paid_amount, change_amount, payment_method)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
-            $stmt->execute([$code, $cashierId, $totalPrice, $paidAmount, $changeAmount]);
+            $stmt->execute([$storeId, $code, $cashierId, $subtotal, $taxAmount, $totalPrice, $paidAmount, $changeAmount, $paymentMethod]);
             $transactionId = (int) $this->pdo->lastInsertId();
 
-            // Insert transaction items
             $stmtItem = $this->pdo->prepare(
-                "INSERT INTO transaction_items (transaction_id, product_name, quantity, subtotal) VALUES (?, ?, ?, ?)"
+                "INSERT INTO transaction_items (store_id, transaction_id, product_name, quantity, subtotal)
+                 VALUES (?, ?, ?, ?, ?)"
             );
-            foreach ($items as $item) {
+            foreach ($trustedItems as $item) {
                 $stmtReduce->execute([
                     $item['quantity'],
                     $item['product_id'],
+                    $storeId,
                     $item['quantity'],
                 ]);
 
                 if ($stmtReduce->rowCount() !== 1) {
                     throw new RuntimeException('Gagal mengurangi stok produk.');
                 }
+                $before = $stockBefore[(int) $item['product_id']];
 
                 $stmtItem->execute([
+                    $storeId,
                     $transactionId,
                     $item['name'],
                     $item['quantity'],
                     $item['subtotal'],
                 ]);
+                $stmtMovement->execute([
+                    $storeId,
+                    $item['product_id'],
+                    $cashierId,
+                    $item['quantity'],
+                    $before,
+                    $before - (int) $item['quantity'],
+                    $code,
+                ]);
             }
 
+            $stmtShift = $this->pdo->prepare(
+                "UPDATE cashier_shifts
+                 SET total_transactions = total_transactions + 1
+                 WHERE store_id = ? AND kasir_id = ? AND status = 'open'"
+            );
+            $stmtShift->execute([$storeId, $cashierId]);
+
             $this->pdo->commit();
+            try {
+                AuditLogger::log($this->actor, 'checkout', 'transactions', $transactionId, null, [
+                    'transaction_code' => $code,
+                    'total_price' => $totalPrice,
+                    'item_count' => count($trustedItems),
+                ], $this->pdo);
+            } catch (Throwable $auditException) {
+                error_log($auditException->__toString());
+            }
             return $transactionId;
-        } catch (Exception $e) {
-            $this->pdo->rollBack();
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             return false;
         }
     }
@@ -249,22 +466,23 @@ class Transaction
      *
      * @return string
      */
-    private function generateTransactionCode(): string
+    private function generateTransactionCode(int $storeId): string
     {
-        $prefix = date('Ym');
+        $prefix = date('Ymd');
         $stmt = $this->pdo->prepare(
-            "SELECT transaction_code FROM transactions WHERE transaction_code LIKE ? ORDER BY id DESC LIMIT 1"
+            "SELECT transaction_code FROM transactions
+             WHERE store_id = ? AND transaction_code LIKE ? ORDER BY id DESC LIMIT 1"
         );
-        $stmt->execute(["TRX-{$prefix}-%"]);
+        $stmt->execute([$storeId, "INV-{$prefix}-%"]);
         $last = $stmt->fetch();
 
-        if ($last && preg_match('/TRX-\d+-(\d+)/', $last['transaction_code'], $m)) {
+        if ($last && preg_match('/INV-\d+-(\d+)/', $last['transaction_code'], $m)) {
             $next = (int) $m[1] + 1;
         } else {
             $next = 1;
         }
 
-        return sprintf('TRX-%s-%03d', $prefix, $next);
+        return sprintf('INV-%s-%04d', $prefix, $next);
     }
 
     /**
@@ -275,9 +493,25 @@ class Transaction
     public function todayRevenue(): float
     {
         $stmt = $this->pdo->prepare(
-            "SELECT COALESCE(SUM(total_price), 0) FROM transactions WHERE DATE(created_at) = CURDATE()"
+            "SELECT COALESCE(SUM(t.total_price), 0)
+             FROM transactions t
+             INNER JOIN users u ON t.cashier_id = u.id
+             WHERE DATE(t.created_at) = CURDATE()
+               AND (? IS NULL OR t.store_id = ?)"
         );
-        $stmt->execute();
+        $stmt->execute([$this->storeId, $this->storeId]);
+        return (float) $stmt->fetchColumn();
+    }
+
+    public function monthRevenue(): float
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT COALESCE(SUM(t.total_price), 0)
+             FROM transactions t INNER JOIN users u ON t.cashier_id = u.id
+             WHERE YEAR(t.created_at) = YEAR(CURDATE()) AND MONTH(t.created_at) = MONTH(CURDATE())
+               AND (? IS NULL OR t.store_id = ?)"
+        );
+        $stmt->execute([$this->storeId, $this->storeId]);
         return (float) $stmt->fetchColumn();
     }
 
@@ -289,9 +523,13 @@ class Transaction
     public function todayCount(): int
     {
         $stmt = $this->pdo->prepare(
-            "SELECT COUNT(*) FROM transactions WHERE DATE(created_at) = CURDATE()"
+            "SELECT COUNT(*)
+             FROM transactions t
+             INNER JOIN users u ON t.cashier_id = u.id
+             WHERE DATE(t.created_at) = CURDATE()
+               AND (? IS NULL OR t.store_id = ?)"
         );
-        $stmt->execute();
+        $stmt->execute([$this->storeId, $this->storeId]);
         return (int) $stmt->fetchColumn();
     }
 
@@ -306,9 +544,11 @@ class Transaction
             "SELECT COALESCE(SUM(ti.quantity), 0)
              FROM transaction_items ti
              INNER JOIN transactions t ON ti.transaction_id = t.id
-             WHERE DATE(t.created_at) = CURDATE()"
+             INNER JOIN users u ON t.cashier_id = u.id
+             WHERE DATE(t.created_at) = CURDATE()
+               AND (? IS NULL OR t.store_id = ?)"
         );
-        $stmt->execute();
+        $stmt->execute([$this->storeId, $this->storeId]);
         return (int) $stmt->fetchColumn();
     }
 
@@ -320,9 +560,13 @@ class Transaction
     public function todayPaidAmount(): float
     {
         $stmt = $this->pdo->prepare(
-            "SELECT COALESCE(SUM(paid_amount), 0) FROM transactions WHERE DATE(created_at) = CURDATE()"
+            "SELECT COALESCE(SUM(t.paid_amount), 0)
+             FROM transactions t
+             INNER JOIN users u ON t.cashier_id = u.id
+             WHERE DATE(t.created_at) = CURDATE()
+               AND (? IS NULL OR t.store_id = ?)"
         );
-        $stmt->execute();
+        $stmt->execute([$this->storeId, $this->storeId]);
         return (float) $stmt->fetchColumn();
     }
 
@@ -334,9 +578,13 @@ class Transaction
     public function todayChangeAmount(): float
     {
         $stmt = $this->pdo->prepare(
-            "SELECT COALESCE(SUM(change_amount), 0) FROM transactions WHERE DATE(created_at) = CURDATE()"
+            "SELECT COALESCE(SUM(t.change_amount), 0)
+             FROM transactions t
+             INNER JOIN users u ON t.cashier_id = u.id
+             WHERE DATE(t.created_at) = CURDATE()
+               AND (? IS NULL OR t.store_id = ?)"
         );
-        $stmt->execute();
+        $stmt->execute([$this->storeId, $this->storeId]);
         return (float) $stmt->fetchColumn();
     }
 
@@ -354,13 +602,46 @@ class Transaction
                     SUM(ti.subtotal) AS total_sales
              FROM transaction_items ti
              INNER JOIN transactions t ON ti.transaction_id = t.id
+             INNER JOIN users u ON t.cashier_id = u.id
              WHERE DATE(t.created_at) = CURDATE()
+               AND (? IS NULL OR t.store_id = ?)
              GROUP BY ti.product_name
              ORDER BY total_quantity DESC, total_sales DESC
              LIMIT ?"
         );
-        $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+        $stmt->bindValue(1, $this->storeId, $this->storeId === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+        $stmt->bindValue(2, $this->storeId, $this->storeId === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+        $stmt->bindValue(3, $limit, PDO::PARAM_INT);
         $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    private function hasColumn(string $table, string $column): bool
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM information_schema.columns
+             WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
+        );
+        $stmt->execute([$table, $column]);
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    private function retailTransactions(string $condition = '1 = 1', array $params = []): array
+    {
+        $scope = $this->storeId === null ? '' : ' AND t.store_id = ?';
+        if ($this->storeId !== null) {
+            $params[] = $this->storeId;
+        }
+        $stmt = $this->pdo->prepare(
+            "SELECT t.*, t.kasir_id AS cashier_id, t.total AS total_price,
+                    t.cash_received AS paid_amount, u.name AS cashier_name,
+                    pm.type AS payment_method
+             FROM transactions t
+             LEFT JOIN users u ON t.kasir_id = u.id
+             LEFT JOIN payment_methods pm ON pm.id = t.payment_method_id
+             WHERE {$condition}{$scope} ORDER BY t.id DESC"
+        );
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
 }

@@ -1,0 +1,30 @@
+CREATE TABLE products (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    store_id BIGINT UNSIGNED NOT NULL,
+    category_id BIGINT UNSIGNED NULL,
+    name VARCHAR(180) NOT NULL,
+    sku VARCHAR(80) NOT NULL,
+    purchase_price DECIMAL(15,2) NOT NULL DEFAULT 0,
+    selling_price DECIMAL(15,2) NOT NULL,
+    stock INT NOT NULL DEFAULT 0,
+    min_stock INT NOT NULL DEFAULT 0,
+    unit VARCHAR(30) NOT NULL DEFAULT 'pcs',
+    image VARCHAR(255) NULL,
+    status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_products_store_sku (store_id, sku),
+    UNIQUE KEY uq_products_store_id_id (store_id, id),
+    INDEX idx_products_store_id (store_id),
+    INDEX idx_products_category_id (category_id),
+    INDEX idx_products_sku (sku),
+    INDEX idx_products_status (status),
+    INDEX idx_products_created_at (created_at),
+    INDEX idx_products_store_created (store_id, created_at),
+    CONSTRAINT fk_products_store FOREIGN KEY (store_id) REFERENCES stores(id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id)
+        ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT chk_products_stock CHECK (stock >= 0),
+    CONSTRAINT chk_products_prices CHECK (purchase_price >= 0 AND selling_price >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

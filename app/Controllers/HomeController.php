@@ -21,7 +21,7 @@ class HomeController extends Controller
     public function landing(): void
     {
         if (isAuthenticated()) {
-            $this->redirect('/dashboard');
+            $this->redirect(currentRole() === 'kasir' ? '/kasir/transaction' : '/dashboard');
         }
 
         $title = 'POS App';
@@ -30,7 +30,10 @@ class HomeController extends Controller
 
     public function index(): void
     {
-        requireAuth();
+        if (isRole('kasir')) {
+            $this->redirect('/kasir/transaction');
+        }
+        allowOnly(['super_admin', 'admin']);
 
         $productModel     = new Product();
         $transactionModel = new Transaction();
@@ -39,22 +42,20 @@ class HomeController extends Controller
         $totalProducts = $productModel->count();
         $totalStock    = $productModel->totalStock();
         $todayRevenue  = $transactionModel->todayRevenue();
+        $monthRevenue  = $transactionModel->monthRevenue();
         $todaySales    = $transactionModel->todayCount();
-        $todayItemsSold = $transactionModel->todayItemsSold();
-        $todayPaidAmount = $transactionModel->todayPaidAmount();
-        $todayChangeAmount = $transactionModel->todayChangeAmount();
-        $todayTopProducts = $transactionModel->todayTopProducts();
         $dailySalesChart = $transactionModel->getDailySalesChartData(7);
         $monthlySalesChart = $transactionModel->getSalesChartData();
-        $topSellingProducts = $transactionModel->getTopSellingProducts();
-        $totalUsers    = $userModel->count();
+        $visibleUsers = $userModel->getAll(currentStoreId());
+        $totalUsers = count(array_filter($visibleUsers, fn(array $user): bool =>
+            $user['deleted_at'] === null && (isSuperAdmin() ? $user['role'] !== 'super_admin' : $user['role'] === 'kasir')
+        ));
         $lowStockProducts = $productModel->getLowStock();
 
-        // Ambil transaksi header hari ini + detail-nya
-        $todayHeaders = $transactionModel->getToday();
+        $todayHeaders = $transactionModel->getRecentTransactions();
         $todayDetails = [];
-        foreach ($todayHeaders as $trx) {
-            $todayDetails[$trx['id']] = $transactionModel->getDetails($trx['id']);
+        foreach ($todayHeaders as $transaction) {
+            $todayDetails[(int) $transaction['id']] = $transactionModel->getDetails((int) $transaction['id']);
         }
 
         $this->view('home/index', [
@@ -62,14 +63,10 @@ class HomeController extends Controller
             'totalProducts' => $totalProducts,
             'totalStock'    => $totalStock,
             'todayRevenue'  => $todayRevenue,
+            'monthRevenue'  => $monthRevenue,
             'todaySales'    => $todaySales,
-            'todayItemsSold' => $todayItemsSold,
-            'todayPaidAmount' => $todayPaidAmount,
-            'todayChangeAmount' => $todayChangeAmount,
-            'todayTopProducts' => $todayTopProducts,
             'dailySalesChart' => $dailySalesChart,
             'monthlySalesChart' => $monthlySalesChart,
-            'topSellingProducts' => $topSellingProducts,
             'totalUsers'    => $totalUsers,
             'lowStockProducts' => $lowStockProducts,
             'todayHeaders'  => $todayHeaders,
@@ -82,7 +79,7 @@ class HomeController extends Controller
      */
     public function exportDaily(): void
     {
-        requireAuth();
+        allowOnly(['super_admin', 'admin']);
 
         $transactionModel = new Transaction();
         $transactions     = $transactionModel->getToday();

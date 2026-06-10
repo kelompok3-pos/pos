@@ -1,0 +1,2 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>403 - Akses Ditolak</title><link href="<?= asset('css/style.css') ?>" rel="stylesheet"></head>
+<body class="error-screen"><main class="error-card"><span>403</span><h1>Akses ditolak</h1><p>Akun Anda tidak memiliki izin untuk membuka halaman ini.</p><a class="btn btn-primary" href="<?= url('/dashboard') ?>">Kembali ke dashboard</a></main></body></html>

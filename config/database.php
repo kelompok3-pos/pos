@@ -9,7 +9,7 @@
  *
  * Cara pakai di Model:
  *   $pdo = getConnection();
- *   $stmt = $pdo->query("SELECT * FROM products");
+ *   $stmt = $pdo->prepare("SELECT * FROM products WHERE store_id = ?");
  * =================================================================
  */
 

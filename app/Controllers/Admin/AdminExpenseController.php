@@ -1,0 +1,133 @@
+<?php
+
+require_once __DIR__ . '/../Controller.php';
+
+final class AdminExpenseController extends Controller
+{
+    private ActorContext $actor;
+    private ExpenseRepository $expenses;
+
+    public function __construct()
+    {
+        $this->actor = ActorContext::fromSession();
+        $this->actor->requireRole('admin');
+        $this->expenses = new ExpenseRepository(getConnection(), $this->actor);
+    }
+
+    public function index(): void
+    {
+        $from = self::dateOrFallback((string) ($_GET['from'] ?? date('Y-m-01')), date('Y-m-01'));
+        $to = self::dateOrFallback((string) ($_GET['to'] ?? date('Y-m-d')), date('Y-m-d'));
+        $category = trim((string) ($_GET['category'] ?? ''));
+        $where = ['store_id = ?', 'expense_date BETWEEN ? AND ?'];
+        $params = [$this->actor->requireStoreId(), $from, $to];
+        if (in_array($category, self::categories(), true)) {
+            $where[] = 'category = ?';
+            $params[] = $category;
+        }
+        $stmt = getConnection()->prepare(
+            'SELECT * FROM expenses WHERE ' . implode(' AND ', $where) . ' ORDER BY expense_date DESC, id DESC'
+        );
+        $stmt->execute($params);
+        $summaryStmt = getConnection()->prepare(
+            'SELECT category, COALESCE(SUM(amount), 0) AS total FROM expenses
+             WHERE store_id = ? AND expense_date BETWEEN ? AND ? GROUP BY category ORDER BY total DESC'
+        );
+        $summaryStmt->execute([$this->actor->requireStoreId(), $from, $to]);
+        $this->view('admin/expense/index', [
+            'title' => 'Pengeluaran',
+            'expenses' => $stmt->fetchAll(),
+            'summary' => $summaryStmt->fetchAll(),
+            'from' => $from,
+            'to' => $to,
+            'selectedCategory' => $category,
+            'categories' => self::categories(),
+        ]);
+    }
+
+    public function store(): void
+    {
+        verifyCsrf();
+        $category = trim($_POST['category'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+        $amount = (float) ($_POST['amount'] ?? 0);
+        $date = trim($_POST['expense_date'] ?? date('Y-m-d'));
+
+        if (!in_array($category, self::categories(), true) || $description === '' || $amount <= 0 || !self::isDate($date)) {
+            flash('error', 'Data pengeluaran tidak valid.');
+            $this->redirect('/admin/expense');
+        }
+        $this->expenses->createExpense($category, $amount, $description, $date);
+        flash('success', 'Pengeluaran berhasil dicatat.');
+        $this->redirect('/admin/expense');
+    }
+
+    public function update(): void
+    {
+        verifyCsrf();
+        $id = (int) ($_POST['id'] ?? 0);
+        assertBelongsToStore('expenses', $id, $this->actor->requireStoreId());
+        $category = trim((string) ($_POST['category'] ?? ''));
+        $amount = (float) ($_POST['amount'] ?? 0);
+        $description = trim((string) ($_POST['description'] ?? ''));
+        $date = trim((string) ($_POST['expense_date'] ?? ''));
+        if (!in_array($category, self::categories(), true) || $amount <= 0 || $description === '' || !self::isDate($date)) {
+            flash('error', 'Data pengeluaran tidak valid.');
+            $this->redirect('/admin/expense');
+        }
+        $this->expenses->update($id, compact('category', 'amount', 'description') + ['expense_date' => $date]);
+        flash('success', 'Pengeluaran berhasil diperbarui.');
+        $this->redirect('/admin/expense');
+    }
+
+    public function export(): void
+    {
+        $this->indexExportRows();
+    }
+
+    public function delete(): void
+    {
+        verifyCsrf();
+        $id = (int) ($_POST['id'] ?? 0);
+        assertBelongsToStore('expenses', $id, $this->actor->requireStoreId());
+        $this->expenses->delete($id);
+        flash('success', 'Pengeluaran berhasil dihapus.');
+        $this->redirect('/admin/expense');
+    }
+
+    private static function isDate(string $value): bool
+    {
+        $date = DateTimeImmutable::createFromFormat('Y-m-d', $value);
+        return $date !== false && $date->format('Y-m-d') === $value;
+    }
+
+    private function indexExportRows(): void
+    {
+        $from = self::dateOrFallback((string) ($_GET['from'] ?? date('Y-m-01')), date('Y-m-01'));
+        $to = self::dateOrFallback((string) ($_GET['to'] ?? date('Y-m-d')), date('Y-m-d'));
+        $stmt = getConnection()->prepare(
+            'SELECT expense_date, category, description, amount FROM expenses
+             WHERE store_id = ? AND expense_date BETWEEN ? AND ? ORDER BY expense_date DESC'
+        );
+        $stmt->execute([$this->actor->requireStoreId(), $from, $to]);
+        header('Content-Type: text/csv; charset=utf-8');
+        header("Content-Disposition: attachment; filename=\"pengeluaran-{$from}-{$to}.csv\"");
+        $output = fopen('php://output', 'w');
+        fputcsv($output, ['Tanggal', 'Kategori', 'Deskripsi', 'Nominal']);
+        foreach ($stmt->fetchAll() as $row) {
+            fputcsv($output, $row);
+        }
+        fclose($output);
+        exit;
+    }
+
+    private static function categories(): array
+    {
+        return ['operational', 'purchase', 'salary', 'other'];
+    }
+
+    private static function dateOrFallback(string $value, string $fallback): string
+    {
+        return self::isDate($value) ? $value : $fallback;
+    }
+}

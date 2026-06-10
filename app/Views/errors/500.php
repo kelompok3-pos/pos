@@ -1,0 +1,2 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>500 - Gangguan Server</title><link href="<?= asset('css/style.css') ?>" rel="stylesheet"></head>
+<body class="error-screen"><main class="error-card"><span>500</span><h1>Terjadi gangguan</h1><p>Permintaan belum dapat diproses. Silakan coba kembali beberapa saat lagi.</p><a class="btn btn-primary" href="<?= url('/') ?>">Kembali ke beranda</a></main></body></html>
