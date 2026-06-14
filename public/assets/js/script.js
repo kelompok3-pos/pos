@@ -120,95 +120,115 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const userId = document.body.dataset.userId || "guest";
   const userRole = document.body.dataset.userRole || "guest";
-  const tourStorageKey = `posGuideTourSeen:${userId}:${userRole}`;
+  const tourStorageKey = `posGuideTourSeen:v2:${userId}:${userRole}`;
 
   let currentTourStep = 0;
   let activeTourSteps = [];
   let activeTourTarget = null;
   let restoreCollapsedSidebar = false;
 
-  const baseTourSteps = [
-    {
-      target: "dashboard-overview",
-      title: "Mulai dari Dashboard",
-      text: "Di sini kamu melihat ringkasan toko hari ini. Mulai dari angka utama, stok, sampai aktivitas penjualan.",
-    },
-    {
-      target: "sidebar-toggle",
-      title: "Minimize Sidebar",
-      text: "Klik tombol ini untuk mengecilkan sidebar. Saat kecil, menu tetap bisa dipakai lewat ikon.",
-    },
-    {
-      target: "nav-dashboard",
-      title: "Kembali ke Dashboard",
-      text: "Gunakan menu Dashboard untuk kembali ke halaman ringkasan dari mana pun.",
-    },
-  ];
+  const tourWorkflows = {
+    admin: [
+      {
+        target: "nav-dashboard",
+        title: "Cek Dashboard",
+        text: "Mulai dari Dashboard untuk melihat ringkasan penjualan, transaksi, dan kondisi stok hari ini.",
+      },
+      {
+        target: "nav-products",
+        title: "Siapkan Produk",
+        text: "Masuk ke Product Management untuk menambah produk, mengatur harga, atau memperbarui data produk.",
+      },
+      {
+        target: "nav-inventory",
+        title: "Atur Persediaan",
+        text: "Setelah produk tersedia, buka Inventory / Stock untuk mengecek dan menyesuaikan jumlah stok.",
+      },
+      {
+        target: "nav-users",
+        title: "Kelola Pengguna",
+        text: "Gunakan User Management untuk membuat akun kasir dan mengatur pengguna yang dapat mengakses sistem.",
+      },
+      {
+        target: "nav-expenses",
+        title: "Catat Pengeluaran",
+        text: "Setiap ada biaya operasional, catat melalui Expenses agar perhitungan usaha tetap akurat.",
+      },
+      {
+        target: "nav-reports",
+        title: "Tinjau Laporan",
+        text: "Terakhir, buka Reports untuk memantau hasil penjualan dan mengevaluasi performa usaha.",
+      },
+    ],
+    super_admin: [
+      {
+        target: "nav-dashboard",
+        title: "Pantau Platform",
+        text: "Mulai dari Platform Overview untuk melihat kondisi operasional seluruh toko.",
+      },
+      {
+        target: "nav-stores",
+        title: "Kelola Toko",
+        text: "Buka Toko untuk menambah toko baru atau memperbarui data toko yang sudah terdaftar.",
+      },
+      {
+        target: "nav-users",
+        title: "Atur Pengguna",
+        text: "Gunakan User Management untuk membuat akun dan mengatur akses pengguna.",
+      },
+      {
+        target: "nav-reports",
+        title: "Bandingkan Laporan",
+        text: "Buka Laporan Lintas Toko untuk membandingkan performa setiap toko.",
+      },
+      {
+        target: "nav-audit",
+        title: "Periksa Aktivitas",
+        text: "Gunakan Audit Log untuk memeriksa riwayat aktivitas penting di dalam sistem.",
+      },
+      {
+        target: "nav-settings",
+        title: "Atur Sistem",
+        text: "Gunakan Settings untuk menyesuaikan konfigurasi platform.",
+      },
+    ],
+    kasir: [
+      {
+        target: "nav-shift",
+        title: "Buka Shift",
+        text: "Sebelum mulai melayani pelanggan, buka My Shift lalu mulai shift kasir.",
+      },
+      {
+        target: "nav-transaction",
+        title: "Proses Transaksi",
+        text: "Masuk ke POS / Cashier, pilih produk pelanggan, lalu selesaikan pembayaran.",
+      },
+      {
+        target: "nav-my-transactions",
+        title: "Cek Riwayat Transaksi",
+        text: "Gunakan My Transactions untuk melihat kembali transaksi yang sudah kamu proses.",
+      },
+      {
+        target: "nav-shift",
+        title: "Tutup Shift",
+        text: "Setelah pekerjaan selesai, kembali ke My Shift untuk menutup shift kasir.",
+      },
+    ],
+  };
 
-  const adminTourSteps = [
-    {
-      target: "quick-add-product",
-      title: "Tambah Produk",
-      text: "Klik kartu ini untuk memasukkan produk baru, harga, dan stok awal.",
-    },
-    {
-      target: "quick-add-user",
-      title: "Kelola Tim",
-      text: "Klik ini untuk membuat akun kasir. Jika kamu Super Admin, kamu juga bisa membuat akun admin.",
-    },
-    {
-      target: "nav-products",
-      title: "Kelola Produk",
-      text: "Menu Produk dipakai untuk melihat, mengedit, dan menonaktifkan produk.",
-    },
-  ];
-
-  const cashierTourSteps = [
-    {
-      target: "quick-transaction",
-      title: "Transaksi Baru",
-      text: "Klik kartu ini untuk membuka kasir dan mulai checkout pelanggan.",
-    },
-    {
-      target: "quick-product-search",
-      title: "Cari Produk",
-      text: "Gunakan ini untuk mengecek harga dan stok produk tanpa masuk ke transaksi.",
-    },
-    {
-      target: "nav-transaction",
-      title: "Menu Transaksi",
-      text: "Menu ini adalah jalur utama kasir untuk melayani transaksi harian.",
-    },
-  ];
-
-  const endingTourSteps = [
-    {
-      target: "dashboard-kpis",
-      title: "Pantau Angka Utama",
-      text: "Bagian ini menunjukkan pendapatan, jumlah transaksi, produk terjual, dan total stok.",
-    },
-    {
-      target: "quick-export",
-      title: "Export Laporan",
-      text: "Klik Export CSV untuk mengunduh laporan penjualan hari ini.",
-    },
-    {
-      target: "tour-help",
-      title: "Ulangi Guide Tour",
-      text: "Kapan pun butuh bantuan, klik Guide Tour untuk menjalankan panduan ini lagi.",
-    },
-  ];
+  function isTourTargetVisible(target) {
+    return Boolean(target && target.getClientRects().length);
+  }
 
   function getTourSteps() {
-    const roleSteps = ["admin", "super_admin"].includes(userRole)
-      ? adminTourSteps
-      : cashierTourSteps;
+    const normalizedRole = userRole === "superadmin" ? "super_admin" : userRole;
+    const steps = tourWorkflows[normalizedRole] || [];
 
-    return [...baseTourSteps, ...roleSteps, ...endingTourSteps].filter(
-      function (step) {
-        return document.querySelector(`[data-tour="${step.target}"]`);
-      },
-    );
+    return steps.filter(function (step) {
+      return isTourTargetVisible(
+        document.querySelector(`[data-tour="${step.target}"]`),
+      );
+    });
   }
 
   function clearTourTarget() {
@@ -258,7 +278,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const target = document.querySelector(`[data-tour="${step.target}"]`);
 
-    if (!target) {
+    if (!isTourTargetVisible(target)) {
       currentTourStep += 1;
 
       if (currentTourStep >= activeTourSteps.length) {
@@ -293,7 +313,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       if (tourStepCount) {
-        tourStepCount.textContent = `Step ${currentTourStep + 1}/${activeTourSteps.length}`;
+        tourStepCount.textContent = `Langkah ${currentTourStep + 1} dari ${activeTourSteps.length}`;
       }
 
       if (tourTitle) {
@@ -310,7 +330,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (tourNext) {
         tourNext.textContent =
-          currentTourStep === activeTourSteps.length - 1 ? "Finish" : "Next";
+          currentTourStep === activeTourSteps.length - 1 ? "Selesai" : "Berikutnya";
       }
 
       positionTourCard(rect);
@@ -341,6 +361,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     tourRoot.classList.add("is-active");
     tourRoot.setAttribute("aria-hidden", "false");
+    document.body.classList.add("app-tour-open");
 
     currentTourStep = 0;
     renderTourStep();
@@ -357,6 +378,8 @@ document.addEventListener("DOMContentLoaded", function () {
       tourRoot.classList.remove("is-active");
       tourRoot.setAttribute("aria-hidden", "true");
     }
+
+    document.body.classList.remove("app-tour-open");
 
     if (restoreCollapsedSidebar) {
       setSidebarCollapsed(true, false);
@@ -398,6 +421,18 @@ document.addEventListener("DOMContentLoaded", function () {
     if (tourSkip) {
       tourSkip.addEventListener("click", finishTour);
     }
+
+    document.addEventListener("keydown", function (event) {
+      if (!tourRoot.classList.contains("is-active")) return;
+
+      if (event.key === "Escape") {
+        finishTour();
+      } else if (event.key === "ArrowRight") {
+        tourNext?.click();
+      } else if (event.key === "ArrowLeft") {
+        tourBack?.click();
+      }
+    });
 
     window.addEventListener("resize", function () {
       if (tourRoot.classList.contains("is-active")) {

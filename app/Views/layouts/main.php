@@ -749,6 +749,19 @@ html.sidebar-collapsed .app-sidebar-link[aria-current="page"]::before {
             </div>
 
             <div class="app-topbar-actions">
+                <?php if (isAuthenticated()): ?>
+                    <button
+                        type="button"
+                        class="app-tour-start"
+                        id="startGuideTour"
+                        data-tour="tour-help"
+                        aria-label="Mulai panduan menu"
+                    >
+                        <i class="ti ti-route" aria-hidden="true"></i>
+                        Guide Tour
+                    </button>
+                <?php endif; ?>
+
                 <span>
                     <i class="ti ti-calendar" aria-hidden="true"></i>
                     <?= date('d M Y') ?>
@@ -811,6 +824,41 @@ html.sidebar-collapsed .app-sidebar-link[aria-current="page"]::before {
         </footer>
     </div>
 </div>
+
+<?php if (isAuthenticated()): ?>
+    <div class="app-tour" id="appGuideTour" aria-hidden="true">
+        <div class="app-tour-backdrop"></div>
+        <div class="app-tour-highlight" id="tourHighlight" aria-hidden="true"></div>
+
+        <section
+            class="app-tour-card"
+            id="tourCard"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tourTitle"
+            aria-describedby="tourText"
+        >
+            <div class="app-tour-step" id="tourStepCount">Langkah 1 dari 1</div>
+            <h3 id="tourTitle">Panduan Penggunaan</h3>
+            <p id="tourText">Ikuti langkah penggunaan aplikasi melalui menu yang disorot.</p>
+
+            <div class="app-tour-actions">
+                <button type="button" class="btn btn-ghost btn-sm" id="tourSkip">
+                    Lewati
+                </button>
+
+                <div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="tourBack">
+                        Kembali
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" id="tourNext">
+                        Berikutnya
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+<?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>

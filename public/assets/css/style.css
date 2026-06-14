@@ -487,15 +487,16 @@ main {
 }
 
 .app-tour-backdrop {
-    background: var(--color-neutral-200);
     inset: 0;
     position: absolute;
 }
 
 .app-tour-highlight {
-    border: 3px solid var(--color-warning-text);
+    border: 3px solid #fbbf24;
     border-radius: var(--radius-lg);
-    box-shadow: none;
+    box-shadow:
+        0 0 0 5px rgba(251, 191, 36, 0.24),
+        0 0 0 9999px rgba(15, 23, 42, 0.72);
     left: 0;
     pointer-events: none;
     position: absolute;
@@ -504,6 +505,7 @@ main {
 }
 
 .app-tour-target {
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.32);
     position: relative;
     z-index: 3001;
 }
@@ -512,7 +514,7 @@ main {
     background: var(--color-surface);
     border: 1px solid var(--color-neutral-200);
     border-radius: var(--radius-lg);
-    box-shadow: none;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.3);
     color: var(--color-neutral-800);
     left: 24px;
     max-width: min(380px, calc(100vw - 32px));
@@ -522,6 +524,23 @@ main {
     transition: left 0.18s ease, top 0.18s ease;
     width: 380px;
     z-index: 3002;
+}
+
+.app-tour-open {
+    overflow: hidden;
+}
+
+.app-tour-start {
+    appearance: none;
+}
+
+@media (max-width: 575.98px) {
+    .app-tour-card {
+        bottom: 16px;
+        left: 16px !important;
+        top: auto !important;
+        width: calc(100vw - 32px);
+    }
 }
 
 .app-tour-step {
