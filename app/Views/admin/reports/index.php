@@ -578,7 +578,7 @@ $totalTopProducts = count($topProducts);
                         href="<?= url('/reports/export') ?>?from=<?= e($from) ?>&to=<?= e($to) ?>"
                     >
                         <i class="ti ti-download" aria-hidden="true"></i>
-                        Export CSV
+                        Export Excel
                     </a>
 
                     <button type="button" class="sa-print-button" onclick="window.print()">

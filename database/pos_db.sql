@@ -200,7 +200,8 @@ INSERT IGNORE INTO migrations (filename) VALUES
 ('004_add_cross_store_constraints.sql'),
 ('005_enforce_tenant_foreign_keys.sql'),
 ('006_add_canonical_indexes.sql'),
-('007_remove_redundant_foreign_keys.sql');
+('007_remove_redundant_foreign_keys.sql'),
+('008_remove_store_system_timezone.sql');
 
 INSERT IGNORE INTO tenants (id, name, status) VALUES (1, 'Default Store', 'active');
 
@@ -210,5 +211,4 @@ INSERT IGNORE INTO settings (store_id, setting_key, setting_value) VALUES
 (1, 'store_logo', ''),
 (1, 'currency_symbol', 'Rp'),
 (1, 'tax_percentage', '0'),
-(1, 'receipt_footer', 'Terima kasih sudah berbelanja.'),
-(1, 'system_timezone', 'Asia/Jakarta');
+(1, 'receipt_footer', 'Terima kasih sudah berbelanja.');

@@ -113,15 +113,18 @@ final class AdminExpenseController extends Controller
              ORDER BY expense_date DESC'
         );
         $stmt->execute([$this->actor->requireStoreId(), $from, $to]);
-        header('Content-Type: text/csv; charset=utf-8');
-        header("Content-Disposition: attachment; filename=\"pengeluaran-{$from}-{$to}.csv\"");
-        $output = fopen('php://output', 'w');
-        fputcsv($output, ['Tanggal', 'Kategori', 'Deskripsi', 'Nominal']);
-        foreach ($stmt->fetchAll() as $row) {
-            fputcsv($output, $row);
-        }
-        fclose($output);
-        exit;
+        ExcelExporter::download(
+            "pengeluaran-{$from}-{$to}.xlsx",
+            'Laporan Pengeluaran',
+            [
+                ['key' => 'expense_date', 'label' => 'Tanggal', 'type' => 'date', 'width' => 16],
+                ['key' => 'category', 'label' => 'Kategori', 'width' => 18],
+                ['key' => 'description', 'label' => 'Deskripsi', 'width' => 40],
+                ['key' => 'amount', 'label' => 'Nominal', 'type' => 'currency', 'width' => 20],
+            ],
+            $stmt->fetchAll(),
+            ['Periode' => $from . ' s/d ' . $to, 'Dibuat pada' => date('d/m/Y H:i')]
+        );
     }
 
     private static function categories(): array

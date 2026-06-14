@@ -113,17 +113,28 @@ final class SuperAdminController extends Controller
     {
         [$from, $to, $storeId] = $this->filters();
         $rows = $this->reportRows($from, $to, $storeId);
-        header('Content-Type: text/csv; charset=utf-8');
-        header("Content-Disposition: attachment; filename=\"laporan-lintas-toko-{$from}-{$to}.csv\"");
-        $output = fopen('php://output', 'w');
-        fputcsv($output, ['Toko', 'Transaksi', 'Omzet', 'Pengeluaran', 'Net']);
-        foreach ($rows as $row) {
-            fputcsv($output, [$row['store_name'], $row['transaction_count'], $row['revenue'], $row['expenses'], $row['net']]);
-        }
         $totals = $this->totals($rows);
-        fputcsv($output, ['TOTAL', $totals['transactions'], $totals['revenue'], $totals['expenses'], $totals['net']]);
-        fclose($output);
-        exit;
+        $rows[] = [
+            'store_name' => 'TOTAL',
+            'transaction_count' => $totals['transactions'],
+            'revenue' => $totals['revenue'],
+            'expenses' => $totals['expenses'],
+            'net' => $totals['net'],
+            '__total' => true,
+        ];
+        ExcelExporter::download(
+            "laporan-lintas-toko-{$from}-{$to}.xlsx",
+            'Laporan Lintas Toko',
+            [
+                ['key' => 'store_name', 'label' => 'Toko', 'width' => 28],
+                ['key' => 'transaction_count', 'label' => 'Transaksi', 'type' => 'integer', 'width' => 15],
+                ['key' => 'revenue', 'label' => 'Omzet', 'type' => 'currency', 'width' => 20],
+                ['key' => 'expenses', 'label' => 'Pengeluaran', 'type' => 'currency', 'width' => 20],
+                ['key' => 'net', 'label' => 'Net', 'type' => 'currency', 'width' => 20],
+            ],
+            $rows,
+            ['Periode' => $from . ' s/d ' . $to, 'Dibuat pada' => date('d/m/Y H:i')]
+        );
     }
 
     private function reportRows(string $from, string $to, ?int $storeId): array

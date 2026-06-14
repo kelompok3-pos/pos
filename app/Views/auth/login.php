@@ -367,7 +367,7 @@
 
                 <div class="login-metrics" aria-label="Ringkasan fitur POS">
                     <div>
-                        <strong>CSV</strong>
+                        <strong>Excel</strong>
                         <span>Export laporan</span>
                     </div>
                     <div>

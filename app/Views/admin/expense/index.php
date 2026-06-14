@@ -518,7 +518,7 @@ textarea.sa-form-input {
             href="<?= url('/admin/expense/export?' . http_build_query(['from' => $from, 'to' => $to])) ?>"
         >
             <i class="ti ti-download" aria-hidden="true"></i>
-            Export CSV
+            Export Excel
         </a>
     </div>
 

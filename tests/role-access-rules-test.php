@@ -55,4 +55,14 @@ assertRule(creatableRoles() === [], 'Kasir must not create users.');
 assertRule(!canManageRole('kasir'), 'Kasir must not manage users.');
 assertRule(!canManageUser(['role' => 'kasir', 'store_id' => 10, 'assigned_admin_id' => 3]), 'Kasir must not manage users.');
 
+$adminRoutes = require __DIR__ . '/../routes/admin.php';
+assertRule(
+    $adminRoutes['/settings'][2]['roles'] === [ROLE_ADMIN],
+    'Store settings page must only be accessible by store admin.'
+);
+assertRule(
+    $adminRoutes['/settings/update'][2]['roles'] === [ROLE_ADMIN],
+    'Store settings update must only be accessible by store admin.'
+);
+
 echo "PASS: Role access rules passed.\n";

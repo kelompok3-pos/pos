@@ -73,41 +73,71 @@ class AdminModuleController extends Controller
         $transactionModel = new Transaction();
         $from = $_GET['from'] ?? date('Y-m-01');
         $to = $_GET['to'] ?? date('Y-m-d');
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="sales-report-' . $from . '-' . $to . '.csv"');
-        $output = fopen('php://output', 'w');
-        fputcsv($output, ['Invoice', 'Kasir', 'Subtotal', 'Tax', 'Total', 'Payment', 'Date']);
-        foreach ($transactionModel->getByDateRange($from, $to) as $row) {
-            fputcsv($output, [$row['transaction_code'], $row['cashier_name'], $row['subtotal'], $row['tax_amount'], $row['total_price'], $row['payment_method'], $row['created_at']]);
-        }
-        fclose($output);
-        exit;
+        ExcelExporter::download(
+            'sales-report-' . $from . '-' . $to . '.xlsx',
+            'Laporan Penjualan',
+            [
+                ['key' => 'transaction_code', 'label' => 'Invoice', 'width' => 20],
+                ['key' => 'cashier_name', 'label' => 'Kasir', 'width' => 20],
+                ['key' => 'subtotal', 'label' => 'Subtotal', 'type' => 'currency', 'width' => 18],
+                ['key' => 'tax_amount', 'label' => 'Pajak', 'type' => 'currency', 'width' => 18],
+                ['key' => 'total_price', 'label' => 'Total', 'type' => 'currency', 'width' => 18],
+                ['key' => 'payment_method', 'label' => 'Pembayaran', 'width' => 16],
+                ['key' => 'created_at', 'label' => 'Tanggal', 'type' => 'datetime', 'width' => 20],
+            ],
+            $transactionModel->getByDateRange($from, $to),
+            ['Periode' => $from . ' s/d ' . $to, 'Dibuat pada' => date('d/m/Y H:i')]
+        );
     }
 
     public function settings(): void
     {
-        allowOnly([ROLE_SUPER_ADMIN]);
+        allowOnly([ROLE_ADMIN]);
         $this->view('admin/settings/index', [
-            'title'    => 'Settings',
+            'title'    => 'Pengaturan Toko & Struk',
             'settings' => (new Setting())->all(),
         ]);
     }
 
     public function updateSettings(): void
     {
-        allowOnly([ROLE_SUPER_ADMIN]);
+        allowOnly([ROLE_ADMIN]);
         verifyCsrf();
-        $allowed = ['store_name', 'store_address', 'currency_symbol', 'tax_percentage', 'receipt_footer', 'system_timezone'];
-        $settings = [];
-        foreach ($allowed as $key) {
-            $settings[$key] = trim($_POST[$key] ?? '');
+        $settings = [
+            'store_name' => trim((string) ($_POST['store_name'] ?? '')),
+            'store_address' => trim((string) ($_POST['store_address'] ?? '')),
+            'currency_symbol' => trim((string) ($_POST['currency_symbol'] ?? '')),
+            'tax_percentage' => trim((string) ($_POST['tax_percentage'] ?? '')),
+            'receipt_footer' => trim((string) ($_POST['receipt_footer'] ?? '')),
+        ];
+        $tax = filter_var($settings['tax_percentage'], FILTER_VALIDATE_FLOAT);
+        if (
+            $settings['store_name'] === ''
+            || mb_strlen($settings['store_name']) > 150
+            || mb_strlen($settings['store_address']) > 500
+            || $settings['currency_symbol'] === ''
+            || mb_strlen($settings['currency_symbol']) > 8
+            || $tax === false
+            || $tax < 0
+            || $tax > 100
+            || mb_strlen($settings['receipt_footer']) > 500
+        ) {
+            flash('error', 'Pengaturan toko tidak valid. Periksa nama toko, simbol mata uang, pajak, dan panjang teks.');
+            $this->redirect('/settings');
         }
+        $settings['tax_percentage'] = rtrim(rtrim(number_format((float) $tax, 2, '.', ''), '0'), '.');
+
         if (isset($_FILES['store_logo']) && $_FILES['store_logo']['error'] === UPLOAD_ERR_OK) {
             $directory = BASE_PATH . '/public/assets/uploads';
-            $settings['store_logo'] = 'uploads/' . uploadImage($_FILES['store_logo'], $directory);
+            try {
+                $settings['store_logo'] = 'uploads/' . uploadImage($_FILES['store_logo'], $directory);
+            } catch (Throwable $exception) {
+                flash('error', $exception->getMessage());
+                $this->redirect('/settings');
+            }
         }
         (new Setting())->updateMany($settings);
-        flash('success', 'Pengaturan berhasil disimpan.');
+        flash('success', 'Pengaturan toko dan struk berhasil disimpan.');
         $this->redirect('/settings');
     }
 }

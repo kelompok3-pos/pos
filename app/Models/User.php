@@ -138,6 +138,7 @@ class User
             );
             $tenantStmt->execute([$tenantName, $createdBy]);
             $tenantId = (int) $this->pdo->lastInsertId();
+            StoreSettingDefaults::seed($this->pdo, $tenantId, $tenantName);
 
             $created = $this->create([
                 'name'              => $data['name'],

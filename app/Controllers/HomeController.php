@@ -74,7 +74,7 @@ class HomeController extends Controller
     }
 
     /**
-     * Export laporan penjualan harian dalam format CSV
+     * Export laporan penjualan harian dalam format Excel
      */
     public function exportDaily(): void
     {
@@ -83,43 +83,42 @@ class HomeController extends Controller
         $transactionModel = new Transaction();
         $transactions     = $transactionModel->getToday();
 
-        $filename = 'laporan-penjualan-' . date('Y-m-d') . '.csv';
-
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-
-        $output = fopen('php://output', 'w');
-        fputcsv($output, [
-            'Kode Transaksi',
-            'Kasir',
-            'Produk',
-            'Qty',
-            'Subtotal',
-            'Total Transaksi',
-            'Uang Dibayar',
-            'Kembalian',
-            'Waktu',
-        ]);
+        $rows = [];
 
         foreach ($transactions as $transaction) {
             $details = $transactionModel->getDetails((int) $transaction['id']);
 
             foreach ($details as $item) {
-                fputcsv($output, [
-                    $transaction['transaction_code'],
-                    $transaction['cashier_name'] ?? '-',
-                    $item['product_name'],
-                    $item['quantity'],
-                    $item['subtotal'],
-                    $transaction['total_price'],
-                    $transaction['paid_amount'] ?? 0,
-                    $transaction['change_amount'] ?? 0,
-                    $transaction['created_at'],
-                ]);
+                $rows[] = [
+                    'code' => $transaction['transaction_code'],
+                    'cashier' => $transaction['cashier_name'] ?? '-',
+                    'product' => $item['product_name'],
+                    'quantity' => $item['quantity'],
+                    'subtotal' => $item['subtotal'],
+                    'total' => $transaction['total_price'],
+                    'paid' => $transaction['paid_amount'] ?? 0,
+                    'change' => $transaction['change_amount'] ?? 0,
+                    'created_at' => $transaction['created_at'],
+                ];
             }
         }
 
-        fclose($output);
-        exit;
+        ExcelExporter::download(
+            'laporan-penjualan-' . date('Y-m-d') . '.xlsx',
+            'Laporan Penjualan Harian',
+            [
+                ['key' => 'code', 'label' => 'Kode Transaksi', 'width' => 20],
+                ['key' => 'cashier', 'label' => 'Kasir', 'width' => 20],
+                ['key' => 'product', 'label' => 'Produk', 'width' => 28],
+                ['key' => 'quantity', 'label' => 'Qty', 'type' => 'integer', 'width' => 10],
+                ['key' => 'subtotal', 'label' => 'Subtotal', 'type' => 'currency', 'width' => 18],
+                ['key' => 'total', 'label' => 'Total Transaksi', 'type' => 'currency', 'width' => 20],
+                ['key' => 'paid', 'label' => 'Uang Dibayar', 'type' => 'currency', 'width' => 18],
+                ['key' => 'change', 'label' => 'Kembalian', 'type' => 'currency', 'width' => 18],
+                ['key' => 'created_at', 'label' => 'Waktu', 'type' => 'datetime', 'width' => 20],
+            ],
+            $rows,
+            ['Tanggal' => date('d/m/Y'), 'Dibuat pada' => date('d/m/Y H:i')]
+        );
     }
 }

@@ -18,7 +18,6 @@ $menus = [
         ['User Management', '/admin/user', 'ti-users', 'nav-users'],
         ['Laporan Lintas Toko', '/superadmin/reports', 'ti-chart-bar', 'nav-reports'],
         ['Audit Log', '/superadmin/audit', 'ti-shield-check', 'nav-audit'],
-        ['Settings', '/settings', 'ti-settings', 'nav-settings'],
     ],
     ROLE_ADMIN => [
         ['Dashboard', '/dashboard', 'ti-home', 'nav-dashboard'],
@@ -27,6 +26,7 @@ $menus = [
         ['Inventory / Stock', '/inventory', 'ti-packages', 'nav-inventory'],
         ['Expenses', '/admin/expense', 'ti-receipt-tax', 'nav-expenses'],
         ['Reports', '/reports', 'ti-chart-bar', 'nav-reports'],
+        ['Pengaturan Toko & Struk', '/settings', 'ti-settings', 'nav-settings'],
     ],
     ROLE_KASIR => [
         ['POS / Cashier', '/kasir/transaction', 'ti-cash-register', 'nav-transaction'],

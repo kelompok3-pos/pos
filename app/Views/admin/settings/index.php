@@ -3,40 +3,34 @@ $settings = $settings ?? [];
 
 $fields = [
     'store_name' => [
-        'label' => 'Store Name',
+        'label' => 'Nama pada Struk',
         'type' => 'text',
         'placeholder' => 'Nama toko',
         'icon' => 'ti-building-store',
     ],
     'store_address' => [
-        'label' => 'Store Address',
+        'label' => 'Alamat pada Struk',
         'type' => 'text',
         'placeholder' => 'Alamat toko',
         'icon' => 'ti-map-pin',
     ],
     'currency_symbol' => [
-        'label' => 'Currency Symbol',
+        'label' => 'Simbol Mata Uang',
         'type' => 'text',
         'placeholder' => 'Rp',
         'icon' => 'ti-cash',
     ],
     'tax_percentage' => [
-        'label' => 'Tax Percentage',
+        'label' => 'Pajak (%)',
         'type' => 'number',
         'placeholder' => '0',
         'icon' => 'ti-percentage',
     ],
     'receipt_footer' => [
-        'label' => 'Receipt Footer',
+        'label' => 'Footer Struk',
         'type' => 'text',
         'placeholder' => 'Terima kasih sudah berbelanja',
         'icon' => 'ti-receipt',
-    ],
-    'system_timezone' => [
-        'label' => 'System Timezone',
-        'type' => 'text',
-        'placeholder' => 'Asia/Jakarta',
-        'icon' => 'ti-clock',
     ],
 ];
 ?>
@@ -280,19 +274,19 @@ $fields = [
 
     <div class="sa-header">
         <div class="sa-title">
-            <span class="sa-eyebrow">System</span>
+            <span class="sa-eyebrow">Toko Anda</span>
             <h2>
                 <i class="ti ti-settings" aria-hidden="true"></i>
-                Settings
+                Pengaturan Toko & Struk
             </h2>
-            <p>System-level store and receipt settings.</p>
+            <p>Pengaturan ini hanya berlaku untuk toko Anda dan digunakan pada POS serta struk kasir.</p>
         </div>
     </div>
 
     <div class="sa-panel">
         <div class="sa-panel-header">
-            <div class="sa-panel-title">Store Configuration</div>
-            <div class="sa-panel-subtitle">Atur identitas toko, pajak, footer struk, dan zona waktu sistem.</div>
+            <div class="sa-panel-title">Konfigurasi POS dan Struk</div>
+            <div class="sa-panel-subtitle">Atur identitas pada struk, simbol mata uang, pajak, dan pesan penutup toko Anda.</div>
         </div>
 
         <form action="<?= url('/settings/update') ?>" method="POST" enctype="multipart/form-data">
@@ -351,7 +345,7 @@ $fields = [
                 <div class="sa-form-actions">
                     <button type="submit" class="sa-save-button">
                         <i class="ti ti-device-floppy" aria-hidden="true"></i>
-                        Save Settings
+                        Simpan Pengaturan
                     </button>
                 </div>
             </div>

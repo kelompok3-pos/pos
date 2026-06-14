@@ -415,7 +415,7 @@ $exportUrl = url('/superadmin/reports/export?' . http_build_query([
 
         <a class="sa-export-link" href="<?= $exportUrl ?>">
             <i class="ti ti-download" aria-hidden="true"></i>
-            Export CSV
+            Export Excel
         </a>
     </div>
 
