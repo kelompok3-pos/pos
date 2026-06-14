@@ -229,7 +229,6 @@ body.app-body {
     background: rgba(37, 99, 235, 0.42) !important;
     color: #ffffff !important;
     border-color: rgba(255, 255, 255, 0.22) !important;
-    transform: translateY(-1px);
 }
 
 .app-sidebar-user {
@@ -337,7 +336,6 @@ body.app-body {
     background: rgba(255, 255, 255, 0.12) !important;
     color: #ffffff !important;
     border-color: rgba(255, 255, 255, 0.10);
-    transform: translateX(3px);
 }
 
 .app-sidebar-link.is-active,
