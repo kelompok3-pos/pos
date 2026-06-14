@@ -22,16 +22,11 @@ final class ActorContext
         }
 
         $pdo = getConnection();
-        $storeTable = self::tableExists($pdo, 'stores') ? 'stores' : 'tenants';
-        $hasUserStatus = self::columnExists($pdo, 'users', 'status');
-        $hasDeletedAt = self::columnExists($pdo, 'users', 'deleted_at');
-        $activeUser = $hasUserStatus ? " AND u.status = 'active'" : '';
-        $notDeleted = $hasDeletedAt ? ' AND u.deleted_at IS NULL' : '';
         $stmt = $pdo->prepare(
             "SELECT u.id, u.name, u.role, u.store_id, s.name AS store_name, s.status AS store_status
              FROM users u
-             LEFT JOIN {$storeTable} s ON s.id = u.store_id
-             WHERE u.id = ?{$activeUser}{$notDeleted}
+             LEFT JOIN tenants s ON s.id = u.store_id
+             WHERE u.id = ? AND u.deleted_at IS NULL
              LIMIT 1"
         );
         $stmt->execute([$userId]);
@@ -45,7 +40,7 @@ final class ActorContext
         $role = (string) $user['role'];
         $storeId = $user['store_id'] === null ? null : (int) $user['store_id'];
 
-        if (self::normalizeRole($role) === 'superadmin') {
+        if ($role === ROLE_SUPER_ADMIN) {
             $storeId = null;
         } elseif ($storeId === null || $storeId <= 0 || ($user['store_status'] ?? null) !== 'active') {
             self::invalidateSession();
@@ -70,23 +65,22 @@ final class ActorContext
 
     public function isSuperAdmin(): bool
     {
-        return self::normalizeRole($this->role) === 'superadmin';
+        return $this->role === ROLE_SUPER_ADMIN;
     }
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->role === ROLE_ADMIN;
     }
 
     public function isKasir(): bool
     {
-        return $this->role === 'kasir';
+        return $this->role === ROLE_KASIR;
     }
 
     public function requireRole(string ...$roles): void
     {
-        $allowed = array_map([self::class, 'normalizeRole'], $roles);
-        if (!in_array(self::normalizeRole($this->role), $allowed, true)) {
+        if (!in_array($this->role, $roles, true)) {
             throw new UnauthorizedException('Access denied.');
         }
     }
@@ -118,27 +112,4 @@ final class ActorContext
         );
     }
 
-    private static function normalizeRole(string $role): string
-    {
-        return $role === 'super_admin' ? 'superadmin' : $role;
-    }
-
-    private static function tableExists(PDO $pdo, string $table): bool
-    {
-        $stmt = $pdo->prepare(
-            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?'
-        );
-        $stmt->execute([$table]);
-        return (int) $stmt->fetchColumn() > 0;
-    }
-
-    private static function columnExists(PDO $pdo, string $table, string $column): bool
-    {
-        $stmt = $pdo->prepare(
-            'SELECT COUNT(*) FROM information_schema.columns
-             WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
-        );
-        $stmt->execute([$table, $column]);
-        return (int) $stmt->fetchColumn() > 0;
-    }
 }

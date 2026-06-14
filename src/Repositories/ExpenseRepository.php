@@ -15,7 +15,7 @@ final class ExpenseRepository extends ScopedRepository
             'description' => $description,
             'expense_date' => $date,
         ];
-        $data[$this->hasColumn('user_id') ? 'user_id' : 'created_by'] = $this->actor->user_id;
+        $data['created_by'] = $this->actor->user_id;
         return $this->insert($data);
     }
 }

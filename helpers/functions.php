@@ -1,5 +1,12 @@
 <?php
 
+require_once dirname(__DIR__) . '/config/roles.php';
+require_once dirname(__DIR__) . '/src/Support/Flash.php';
+require_once dirname(__DIR__) . '/src/Support/Csrf.php';
+require_once dirname(__DIR__) . '/src/Support/Formatter.php';
+require_once dirname(__DIR__) . '/src/Support/Redirector.php';
+require_once dirname(__DIR__) . '/src/Support/Escaper.php';
+
 /**
  * =================================================================
  * HELPER FUNCTIONS
@@ -13,12 +20,10 @@
 // URL & REDIRECT
 // ============================================================
 
+/** @deprecated Use Redirector::to(). */
 function redirect(string $url): void
 {
-    $base = rtrim(env('APP_URL', ''), '/');
-    $fullUrl = str_starts_with($url, '/') ? $base . $url : $url;
-    header("Location: {$fullUrl}");
-    exit;
+    Redirector::to($url);
 }
 
 function url(string $path): string
@@ -33,26 +38,20 @@ function asset(string $path): string
     return $base ? $base . '/assets/' . ltrim($path, '/') : '/assets/' . ltrim($path, '/');
 }
 
-function base_url(string $path = ''): string
-{
-    $base = rtrim(env('APP_URL', ''), '/');
-    return $path === '' ? $base : $base . '/' . ltrim($path, '/');
-}
-
 // ============================================================
 // FLASH MESSAGES
 // ============================================================
 
+/** @deprecated Use Flash::set(). */
 function flash(string $key, string $message): void
 {
-    $_SESSION['flash'][$key] = $message;
+    Flash::set($key, $message);
 }
 
+/** @deprecated Use Flash::get(). */
 function getFlash(string $key): ?string
 {
-    $message = $_SESSION['flash'][$key] ?? null;
-    unset($_SESSION['flash'][$key]);
-    return $message;
+    return Flash::get($key);
 }
 
 // ============================================================
@@ -71,28 +70,22 @@ function keepOldInput(): void
     $_SESSION['old'] = array_diff_key($_POST, array_flip(['password', 'csrf_token']));
 }
 
+/** @deprecated Use Csrf::field(). */
 function csrf_field(): string
 {
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    }
-    return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') . '">';
+    return Csrf::field();
 }
 
+/** @deprecated Use Csrf::verify(). */
 function verifyCsrf(): void
 {
-    $token = $_POST['csrf_token'] ?? '';
-    $sessionToken = $_SESSION['csrf_token'] ?? '';
-
-    if (empty($token) || empty($sessionToken) || !hash_equals($sessionToken, $token)) {
-        http_response_code(403);
-        die('CSRF token tidak valid. Silakan refresh halaman dan coba lagi.');
-    }
+    Csrf::verify();
 }
 
+/** @deprecated Use Csrf::regenerate(). */
 function regenerateCsrf(): void
 {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    Csrf::regenerate();
 }
 
 // ============================================================
@@ -122,7 +115,7 @@ function isRole(string $role): bool
 
 function isSuperAdmin(): bool
 {
-    return isRole('super_admin') || isRole('superadmin');
+    return isRole(ROLE_SUPER_ADMIN);
 }
 
 function currentRole(): string
@@ -136,7 +129,7 @@ function currentStoreId(): ?int
         return null;
     }
     if (!class_exists('ActorContext')) {
-        if (($_SESSION['role'] ?? '') === 'super_admin') {
+        if (($_SESSION['role'] ?? '') === ROLE_SUPER_ADMIN) {
             return null;
         }
         $storeId = (int) ($_SESSION['store_id'] ?? 0);
@@ -153,8 +146,8 @@ function currentStoreId(): ?int
 function creatableRoles(): array
 {
     return match (currentRole()) {
-        'super_admin', 'superadmin' => ['admin', 'kasir'],
-        'admin' => ['kasir'],
+        ROLE_SUPER_ADMIN => [ROLE_ADMIN, ROLE_KASIR],
+        ROLE_ADMIN => [ROLE_KASIR],
         default => [],
     };
 }
@@ -177,8 +170,8 @@ function canManageUser(array $targetUser): bool
 
     if (isSuperAdmin()) return true;
 
-    return isRole('admin')
-        && ($targetUser['role'] ?? '') === 'kasir'
+    return isRole(ROLE_ADMIN)
+        && ($targetUser['role'] ?? '') === ROLE_KASIR
         && (int)($targetUser['assigned_admin_id'] ?? 0) === (int)($_SESSION['user_id'] ?? 0)
         && isWithinCurrentStore($targetUser);
 }
@@ -186,9 +179,9 @@ function canManageUser(array $targetUser): bool
 function roleLabel(?string $role): string
 {
     return match ($role) {
-        'super_admin', 'superadmin' => 'Super Admin',
-        'admin' => 'Admin',
-        'kasir' => 'Kasir',
+        ROLE_SUPER_ADMIN => 'Super Admin',
+        ROLE_ADMIN => 'Admin',
+        ROLE_KASIR => 'Kasir',
         default => '-',
     };
 }
@@ -212,25 +205,16 @@ function allowOnly(array $roles): void
 // FORMAT HELPERS
 // ============================================================
 
+/** @deprecated Use Formatter::currency(). */
 function formatRupiah(int|float $angka): string
 {
-    return 'Rp ' . number_format($angka, 0, ',', '.');
+    return Formatter::currency($angka);
 }
 
+/** @deprecated Use Escaper::escape(). */
 function e(?string $value): string
 {
-    return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
-}
-
-function sanitize(string $input): string
-{
-    return htmlspecialchars(trim($input), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-}
-
-function generateSKU(string $prefix = 'PRD'): string
-{
-    $safePrefix = strtoupper((string) preg_replace('/[^A-Z0-9]/i', '', $prefix));
-    return substr($safePrefix ?: 'PRD', 0, 8) . '-' . strtoupper(bin2hex(random_bytes(4)));
+    return Escaper::escape($value);
 }
 
 function uploadImage(array $file, string $destination): string

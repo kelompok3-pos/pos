@@ -21,7 +21,7 @@ require_once __DIR__ . '/../helpers/functions.php';
 require_once __DIR__ . '/../bootstrap/middleware.php';
 
 // 2. Load daftar routes
-require_once __DIR__ . '/../routes.php';
+require_once __DIR__ . '/../bootstrap/router.php';
 
 // 3. Ambil URL dari browser, lalu strip base path (subfolder) jika ada
 $url = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);

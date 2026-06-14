@@ -1,5 +1,3 @@
-USE pos_db;
-
 CREATE TABLE IF NOT EXISTS expenses (
     id INT AUTO_INCREMENT PRIMARY KEY,
     store_id INT NOT NULL,
@@ -11,8 +9,8 @@ CREATE TABLE IF NOT EXISTS expenses (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME DEFAULT NULL,
-    FOREIGN KEY (store_id) REFERENCES tenants(id),
-    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
     INDEX expenses_store_date_idx (store_id, expense_date, deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -27,8 +25,8 @@ CREATE TABLE IF NOT EXISTS cashier_shifts (
     total_transactions INT NOT NULL DEFAULT 0,
     status ENUM('open', 'closed') NOT NULL DEFAULT 'open',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (store_id) REFERENCES tenants(id),
-    FOREIGN KEY (kasir_id) REFERENCES users(id),
+    FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT,
+    FOREIGN KEY (kasir_id) REFERENCES users(id) ON DELETE RESTRICT,
     INDEX cashier_shifts_store_kasir_status_idx (store_id, kasir_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -43,8 +41,8 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     new_value JSON DEFAULT NULL,
     ip_address VARCHAR(45) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (store_id) REFERENCES tenants(id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
     INDEX audit_logs_store_created_idx (store_id, created_at),
     INDEX audit_logs_user_created_idx (user_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

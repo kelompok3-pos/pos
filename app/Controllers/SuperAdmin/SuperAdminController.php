@@ -10,7 +10,7 @@ final class SuperAdminController extends Controller
     public function __construct()
     {
         $this->actor = ActorContext::fromSession();
-        $this->actor->requireRole('superadmin');
+        $this->actor->requireRole(ROLE_SUPER_ADMIN);
         $this->pdo = getConnection();
     }
 
@@ -18,17 +18,13 @@ final class SuperAdminController extends Controller
     {
         $today = date('Y-m-d');
         $report = $this->reportRows($today, $today, null);
-        $storeTable = $this->tableName('stores', 'tenants');
-        $recentAudit = [];
-        if ($this->tableExists('audit_logs')) {
-            $recentAudit = $this->pdo->query(
-                "SELECT a.*, u.name AS user_name, s.name AS store_name
-                 FROM audit_logs a
-                 LEFT JOIN users u ON u.id = a.user_id
-                 LEFT JOIN {$storeTable} s ON s.id = a.store_id
-                 ORDER BY a.created_at DESC LIMIT 10"
-            )->fetchAll();
-        }
+        $recentAudit = $this->pdo->query(
+            "SELECT a.*, u.name AS user_name, s.name AS store_name
+             FROM audit_logs a
+             LEFT JOIN users u ON u.id = a.user_id
+             LEFT JOIN tenants s ON s.id = a.store_id
+             ORDER BY a.created_at DESC LIMIT 10"
+        )->fetchAll();
         $this->view('superadmin/dashboard', [
             'title' => 'Platform Overview',
             'stores' => $report,
@@ -74,7 +70,6 @@ final class SuperAdminController extends Controller
 
     public function audit(): void
     {
-        $storeTable = $this->tableName('stores', 'tenants');
         $where = [];
         $params = [];
         foreach (['store_id' => 'a.store_id', 'user_id' => 'a.user_id'] as $input => $column) {
@@ -102,7 +97,7 @@ final class SuperAdminController extends Controller
         $sql = "SELECT a.*, u.name AS user_name, s.name AS store_name
                 FROM audit_logs a
                 LEFT JOIN users u ON u.id = a.user_id
-                LEFT JOIN {$storeTable} s ON s.id = a.store_id" .
+                LEFT JOIN tenants s ON s.id = a.store_id" .
                 ($where ? ' WHERE ' . implode(' AND ', $where) : '') .
                 ' ORDER BY a.created_at DESC LIMIT 50';
         $stmt = $this->pdo->prepare($sql);
@@ -133,17 +128,15 @@ final class SuperAdminController extends Controller
 
     private function reportRows(string $from, string $to, ?int $storeId): array
     {
-        $storeTable = $this->tableName('stores', 'tenants');
-        $totalColumn = $this->columnExists('transactions', 'total') ? 'total' : 'total_price';
         $whereStore = $storeId === null ? '' : ' WHERE s.id = ?';
         $sql = "SELECT s.id AS store_id, s.name AS store_name, s.status,
                        COALESCE(t.transaction_count, 0) AS transaction_count,
                        COALESCE(t.revenue, 0) AS revenue,
                        COALESCE(e.expenses, 0) AS expenses,
                        COALESCE(t.revenue, 0) - COALESCE(e.expenses, 0) AS net
-                FROM {$storeTable} s
+                FROM tenants s
                 LEFT JOIN (
-                    SELECT store_id, COUNT(*) AS transaction_count, COALESCE(SUM({$totalColumn}), 0) AS revenue
+                    SELECT store_id, COUNT(*) AS transaction_count, COALESCE(SUM(total_price), 0) AS revenue
                     FROM transactions WHERE DATE(created_at) BETWEEN ? AND ? GROUP BY store_id
                 ) t ON t.store_id = s.id
                 LEFT JOIN (
@@ -163,8 +156,7 @@ final class SuperAdminController extends Controller
 
     private function storeOptions(): array
     {
-        $table = $this->tableName('stores', 'tenants');
-        return $this->pdo->query("SELECT id, name FROM {$table} ORDER BY name ASC")->fetchAll();
+        return $this->pdo->query('SELECT id, name FROM tenants ORDER BY name ASC')->fetchAll();
     }
 
     private function totals(array $rows): array
@@ -196,27 +188,4 @@ final class SuperAdminController extends Controller
         return $date && $date->format('Y-m-d') === $value ? $value : $fallback;
     }
 
-    private function tableName(string $preferred, string $fallback): string
-    {
-        return $this->tableExists($preferred) ? $preferred : $fallback;
-    }
-
-    private function tableExists(string $table): bool
-    {
-        $stmt = $this->pdo->prepare(
-            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?'
-        );
-        $stmt->execute([$table]);
-        return (int) $stmt->fetchColumn() > 0;
-    }
-
-    private function columnExists(string $table, string $column): bool
-    {
-        $stmt = $this->pdo->prepare(
-            'SELECT COUNT(*) FROM information_schema.columns
-             WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
-        );
-        $stmt->execute([$table, $column]);
-        return (int) $stmt->fetchColumn() > 0;
-    }
 }

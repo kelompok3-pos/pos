@@ -5,13 +5,14 @@ require_once __DIR__ . '/../Controller.php';
 final class AdminExpenseController extends Controller
 {
     private ActorContext $actor;
-    private ExpenseRepository $expenses;
+    private ExpenseService $expenseService;
 
     public function __construct()
     {
         $this->actor = ActorContext::fromSession();
-        $this->actor->requireRole('admin');
-        $this->expenses = new ExpenseRepository(getConnection(), $this->actor);
+        $this->actor->requireRole(ROLE_ADMIN);
+        $pdo = getConnection();
+        $this->expenseService = new ExpenseService($pdo, $this->actor);
     }
 
     public function index(): void
@@ -19,7 +20,7 @@ final class AdminExpenseController extends Controller
         $from = self::dateOrFallback((string) ($_GET['from'] ?? date('Y-m-01')), date('Y-m-01'));
         $to = self::dateOrFallback((string) ($_GET['to'] ?? date('Y-m-d')), date('Y-m-d'));
         $category = trim((string) ($_GET['category'] ?? ''));
-        $where = ['store_id = ?', 'expense_date BETWEEN ? AND ?'];
+        $where = ['store_id = ?', 'expense_date BETWEEN ? AND ?', 'deleted_at IS NULL'];
         $params = [$this->actor->requireStoreId(), $from, $to];
         if (in_array($category, self::categories(), true)) {
             $where[] = 'category = ?';
@@ -31,7 +32,8 @@ final class AdminExpenseController extends Controller
         $stmt->execute($params);
         $summaryStmt = getConnection()->prepare(
             'SELECT category, COALESCE(SUM(amount), 0) AS total FROM expenses
-             WHERE store_id = ? AND expense_date BETWEEN ? AND ? GROUP BY category ORDER BY total DESC'
+             WHERE store_id = ? AND expense_date BETWEEN ? AND ? AND deleted_at IS NULL
+             GROUP BY category ORDER BY total DESC'
         );
         $summaryStmt->execute([$this->actor->requireStoreId(), $from, $to]);
         $this->view('admin/expense/index', [
@@ -57,7 +59,7 @@ final class AdminExpenseController extends Controller
             flash('error', 'Data pengeluaran tidak valid.');
             $this->redirect('/admin/expense');
         }
-        $this->expenses->createExpense($category, $amount, $description, $date);
+        $this->expenseService->create(compact('category', 'amount', 'description') + ['expense_date' => $date]);
         flash('success', 'Pengeluaran berhasil dicatat.');
         $this->redirect('/admin/expense');
     }
@@ -75,7 +77,7 @@ final class AdminExpenseController extends Controller
             flash('error', 'Data pengeluaran tidak valid.');
             $this->redirect('/admin/expense');
         }
-        $this->expenses->update($id, compact('category', 'amount', 'description') + ['expense_date' => $date]);
+        $this->expenseService->update($id, compact('category', 'amount', 'description') + ['expense_date' => $date]);
         flash('success', 'Pengeluaran berhasil diperbarui.');
         $this->redirect('/admin/expense');
     }
@@ -90,7 +92,7 @@ final class AdminExpenseController extends Controller
         verifyCsrf();
         $id = (int) ($_POST['id'] ?? 0);
         assertBelongsToStore('expenses', $id, $this->actor->requireStoreId());
-        $this->expenses->delete($id);
+        $this->expenseService->delete($id);
         flash('success', 'Pengeluaran berhasil dihapus.');
         $this->redirect('/admin/expense');
     }
@@ -107,7 +109,8 @@ final class AdminExpenseController extends Controller
         $to = self::dateOrFallback((string) ($_GET['to'] ?? date('Y-m-d')), date('Y-m-d'));
         $stmt = getConnection()->prepare(
             'SELECT expense_date, category, description, amount FROM expenses
-             WHERE store_id = ? AND expense_date BETWEEN ? AND ? ORDER BY expense_date DESC'
+             WHERE store_id = ? AND expense_date BETWEEN ? AND ? AND deleted_at IS NULL
+             ORDER BY expense_date DESC'
         );
         $stmt->execute([$this->actor->requireStoreId(), $from, $to]);
         header('Content-Type: text/csv; charset=utf-8');

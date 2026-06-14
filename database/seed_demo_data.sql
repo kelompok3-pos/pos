@@ -1,9 +1,13 @@
-USE pos_db;
-
 START TRANSACTION;
 
-SET @demo_password = '$2y$10$qF1Joc9dQnIVKqCr.IXbxusPvKDGpQWkXGlLSqtgvN/.zRKAQGwgq';
-SET @superadmin_id = (SELECT id FROM users WHERE role = 'super_admin' ORDER BY id LIMIT 1);
+-- All demo accounts use password: Demo123!
+SET @demo_password = '$2y$10$uHlWJqcx0f9w54IXtrRHAuVrIip8N1OrYyUyrrlKnCSMwCzxvzOeS';
+
+INSERT INTO users (name, email, password, role, store_id)
+SELECT 'Super Admin Demo', 'superadmin@demo.pos', @demo_password, 'super_admin', NULL
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'superadmin@demo.pos');
+
+SET @superadmin_id = (SELECT id FROM users WHERE email = 'superadmin@demo.pos' LIMIT 1);
 
 INSERT INTO tenants (name, status, created_by)
 SELECT 'Demo Mart Jakarta', 'active', @superadmin_id
@@ -131,6 +135,16 @@ WHERE NOT EXISTS (
     SELECT 1 FROM transactions t
     WHERE t.store_id = stores.store_id AND t.transaction_code = CONCAT('DEMO-', stores.code, '-', LPAD(days.n, 3, '0'))
 );
+
+UPDATE cashier_shifts shift_row
+SET shift_row.total_transactions = (
+    SELECT COUNT(*)
+    FROM transactions transaction_row
+    WHERE transaction_row.store_id = shift_row.store_id
+      AND transaction_row.cashier_id = shift_row.kasir_id
+      AND transaction_row.transaction_code LIKE 'DEMO-%'
+)
+WHERE shift_row.kasir_id IN (@kasir_jkt1, @kasir_jkt2, @kasir_bdg, @kasir_sby);
 
 INSERT INTO transaction_items (store_id, transaction_id, product_name, quantity, subtotal, created_at)
 SELECT t.store_id, t.id, 'Mi Instan Goreng', 2, 7000, t.created_at

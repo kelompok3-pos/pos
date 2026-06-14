@@ -17,7 +17,7 @@ class AdminUserController extends Controller
 
     public function __construct()
     {
-        allowOnly(['super_admin', 'admin']);
+        allowOnly([ROLE_SUPER_ADMIN, ROLE_ADMIN]);
         $this->userModel = new User();
     }
 

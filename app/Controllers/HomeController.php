@@ -1,7 +1,6 @@
 <?php
 
 require_once __DIR__ . '/Controller.php';
-require_once BASE_PATH . '/app/Models/Product.php';
 require_once BASE_PATH . '/app/Models/Transaction.php';
 require_once BASE_PATH . '/app/Models/User.php';
 
@@ -21,7 +20,7 @@ class HomeController extends Controller
     public function landing(): void
     {
         if (isAuthenticated()) {
-            $this->redirect(currentRole() === 'kasir' ? '/kasir/transaction' : '/dashboard');
+            $this->redirect(currentRole() === ROLE_KASIR ? '/kasir/transaction' : '/dashboard');
         }
 
         $title = 'POS App';
@@ -30,16 +29,16 @@ class HomeController extends Controller
 
     public function index(): void
     {
-        if (isRole('kasir')) {
+        if (isRole(ROLE_KASIR)) {
             $this->redirect('/kasir/transaction');
         }
-        allowOnly(['super_admin', 'admin']);
+        allowOnly([ROLE_SUPER_ADMIN, ROLE_ADMIN]);
 
-        $productModel     = new Product();
+        $productModel     = new ProductRepository(getConnection(), ActorContext::fromSession());
         $transactionModel = new Transaction();
         $userModel        = new User();
 
-        $totalProducts = $productModel->count();
+        $totalProducts = $productModel->countActiveRecords();
         $totalStock    = $productModel->totalStock();
         $todayRevenue  = $transactionModel->todayRevenue();
         $monthRevenue  = $transactionModel->monthRevenue();
@@ -50,7 +49,7 @@ class HomeController extends Controller
         $totalUsers = count(array_filter($visibleUsers, fn(array $user): bool =>
             $user['deleted_at'] === null && (isSuperAdmin() ? $user['role'] !== 'super_admin' : $user['role'] === 'kasir')
         ));
-        $lowStockProducts = $productModel->getLowStock();
+        $lowStockProducts = $productModel->lowStock(5);
 
         $todayHeaders = $transactionModel->getRecentTransactions();
         $todayDetails = [];
@@ -79,7 +78,7 @@ class HomeController extends Controller
      */
     public function exportDaily(): void
     {
-        allowOnly(['super_admin', 'admin']);
+        allowOnly([ROLE_SUPER_ADMIN, ROLE_ADMIN]);
 
         $transactionModel = new Transaction();
         $transactions     = $transactionModel->getToday();

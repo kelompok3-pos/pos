@@ -1,5 +1,3 @@
-USE pos_db;
-
 ALTER TABLE users
     MODIFY role ENUM('super_admin', 'admin', 'kasir') NOT NULL DEFAULT 'kasir';
 

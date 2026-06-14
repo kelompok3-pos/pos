@@ -1,7 +1,6 @@
 <?php
 
 require_once __DIR__ . '/../Controller.php';
-require_once BASE_PATH . '/app/Models/Product.php';
 require_once BASE_PATH . '/app/Models/Transaction.php';
 require_once BASE_PATH . '/app/Models/Setting.php';
 
@@ -24,13 +23,13 @@ require_once BASE_PATH . '/app/Models/Setting.php';
  */
 class KasirTransactionController extends Controller
 {
-    private Product $productModel;
+    private ProductRepository $products;
     private Transaction $transactionModel;
 
     public function __construct()
     {
-        allowOnly(['admin', 'kasir']);
-        $this->productModel     = new Product();
+        allowOnly([ROLE_ADMIN, ROLE_KASIR]);
+        $this->products = new ProductRepository(getConnection(), ActorContext::fromSession());
         $this->transactionModel = new Transaction();
     }
 
@@ -43,10 +42,10 @@ class KasirTransactionController extends Controller
         $settings = (new Setting())->all();
 
         // Ambil semua produk aktif yang stoknya > 0 untuk ditampilkan di grid
-        $products = $this->productModel->getAll();
+        $products = $this->products->active();
 
         // Riwayat transaksi hari ini (untuk panel samping jika diperlukan)
-        $transactions = isRole('kasir')
+        $transactions = isRole(ROLE_KASIR)
             ? $this->transactionModel->getByCashier((int) $_SESSION['user_id'], date('Y-m-d'))
             : $this->transactionModel->getToday();
 
@@ -90,7 +89,7 @@ class KasirTransactionController extends Controller
             $this->redirect('/kasir/transaction');
         }
 
-        $product = $this->productModel->getById($productId);
+        $product = $this->products->findActiveById($productId);
 
         if (!$product) {
             flash('error', 'Produk tidak ditemukan.');
@@ -159,7 +158,7 @@ class KasirTransactionController extends Controller
             $this->redirect('/kasir/transaction');
         }
 
-        $product = $this->productModel->getById($productId);
+        $product = $this->products->findActiveById($productId);
 
         if (!$product) {
             unset($_SESSION['cart'][$productId]);
@@ -308,7 +307,7 @@ class KasirTransactionController extends Controller
         }
 
         // Kasir hanya boleh lihat struk milik sendiri
-        if (isRole('kasir') && (int) $transaction['cashier_id'] !== (int) $_SESSION['user_id']) {
+        if (isRole(ROLE_KASIR) && (int) $transaction['cashier_id'] !== (int) $_SESSION['user_id']) {
             http_response_code(403);
             die('Akses ditolak.');
         }
@@ -329,7 +328,7 @@ class KasirTransactionController extends Controller
 
     public function myTransactions(): void
     {
-        allowOnly(['kasir']);
+        allowOnly([ROLE_KASIR]);
 
         $date         = trim($_GET['date'] ?? '');
         $transactions = $this->transactionModel->getByCashier((int) $_SESSION['user_id'], $date);

@@ -1,28 +1,27 @@
 <?php
 
 require_once __DIR__ . '/../Controller.php';
-require_once BASE_PATH . '/app/Models/Product.php';
 require_once BASE_PATH . '/app/Models/Transaction.php';
 require_once BASE_PATH . '/app/Models/Setting.php';
-require_once BASE_PATH . '/app/Models/StockMovement.php';
 
 class AdminModuleController extends Controller
 {
     public function __construct()
     {
-        allowOnly(['super_admin', 'admin']);
+        allowOnly([ROLE_SUPER_ADMIN, ROLE_ADMIN]);
     }
 
     public function inventory(): void
     {
-        ActorContext::fromSession()->requireRole('admin');
-        $productModel = new Product();
-        $movementModel = new StockMovement();
+        $actor = ActorContext::fromSession();
+        $actor->requireRole(ROLE_ADMIN);
+        $productModel = new ProductRepository(getConnection(), $actor);
+        $movementRepository = new StockRepository(getConnection(), $actor);
         $this->view('admin/inventory/index', [
             'title'      => 'Inventory / Stock',
-            'products'   => $productModel->getAllForManagement(),
-            'lowStock'   => $productModel->getLowStock(),
-            'movements'  => $movementModel->getAll(),
+            'products'   => $productModel->management(),
+            'lowStock'   => $productModel->lowStock(5),
+            'movements'  => $movementRepository->history(),
         ]);
     }
 
@@ -30,40 +29,23 @@ class AdminModuleController extends Controller
     {
         verifyCsrf();
         $actor = ActorContext::fromSession();
-        $actor->requireRole('admin');
-        $productModel = new Product();
-        $movementModel = new StockMovement();
+        $actor->requireRole(ROLE_ADMIN);
+        $inventoryService = new InventoryService(getConnection(), $actor);
         $productId = (int) ($_POST['product_id'] ?? 0);
         $quantity = (int) ($_POST['quantity'] ?? 0);
         $type = $_POST['movement_type'] ?? '';
-        try {
-            assertBelongsToStore('products', $productId, $actor->requireStoreId());
-        } catch (UnauthorizedException) {
-            flash('error', 'Produk tidak ditemukan.');
-            $this->redirect('/inventory');
-        }
-        $product = $productModel->getById($productId);
-
-        if (!$product || $quantity <= 0 || !in_array($type, ['in', 'out'], true)) {
+        if ($quantity <= 0 || !in_array($type, ['in', 'out'], true)) {
             flash('error', 'Data perubahan stok tidak valid.');
             $this->redirect('/inventory');
         }
 
         $delta = $type === 'in' ? $quantity : -$quantity;
-        if (!$productModel->adjustStock($productId, $delta)) {
+        try {
+            $inventoryService->adjust($productId, $delta, trim($_POST['note'] ?? ''));
+        } catch (Throwable) {
             flash('error', 'Stok tidak mencukupi untuk pengurangan tersebut.');
             $this->redirect('/inventory');
         }
-
-        $movementModel->record(
-            $productId,
-            (int) $_SESSION['user_id'],
-            $type,
-            $quantity,
-            (int) $product['stock'],
-            (int) $product['stock'] + $delta,
-            trim($_POST['note'] ?? '')
-        );
         flash('success', 'Stok berhasil diperbarui.');
         $this->redirect('/inventory');
     }
@@ -104,7 +86,7 @@ class AdminModuleController extends Controller
 
     public function settings(): void
     {
-        allowOnly(['super_admin']);
+        allowOnly([ROLE_SUPER_ADMIN]);
         $this->view('admin/settings/index', [
             'title'    => 'Settings',
             'settings' => (new Setting())->all(),
@@ -113,7 +95,7 @@ class AdminModuleController extends Controller
 
     public function updateSettings(): void
     {
-        allowOnly(['super_admin']);
+        allowOnly([ROLE_SUPER_ADMIN]);
         verifyCsrf();
         $allowed = ['store_name', 'store_address', 'currency_symbol', 'tax_percentage', 'receipt_footer', 'system_timezone'];
         $settings = [];
@@ -121,16 +103,8 @@ class AdminModuleController extends Controller
             $settings[$key] = trim($_POST[$key] ?? '');
         }
         if (isset($_FILES['store_logo']) && $_FILES['store_logo']['error'] === UPLOAD_ERR_OK) {
-            $extension = strtolower(pathinfo($_FILES['store_logo']['name'], PATHINFO_EXTENSION));
-            if (in_array($extension, ['png', 'jpg', 'jpeg', 'webp'], true)) {
-                $directory = BASE_PATH . '/public/assets/uploads';
-                if (!is_dir($directory)) {
-                    mkdir($directory, 0775, true);
-                }
-                $filename = 'store-logo.' . $extension;
-                move_uploaded_file($_FILES['store_logo']['tmp_name'], $directory . '/' . $filename);
-                $settings['store_logo'] = 'uploads/' . $filename;
-            }
+            $directory = BASE_PATH . '/public/assets/uploads';
+            $settings['store_logo'] = 'uploads/' . uploadImage($_FILES['store_logo'], $directory);
         }
         (new Setting())->updateMany($settings);
         flash('success', 'Pengaturan berhasil disimpan.');

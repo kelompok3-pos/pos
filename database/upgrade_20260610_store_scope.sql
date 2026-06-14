@@ -1,5 +1,3 @@
-USE pos_db;
-
 ALTER TABLE users
     ADD COLUMN IF NOT EXISTS store_id INT DEFAULT NULL AFTER role;
 

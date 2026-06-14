@@ -50,7 +50,7 @@ function assertBelongsToStore(PDO|string $pdoOrTable, string|int $tableOrId, int
     $scopeId = $pdoOrTable instanceof PDO ? (int) $storeId : $idOrStore;
     $allowed = [
         'products', 'transactions', 'transaction_items', 'stock_movements', 'expenses',
-        'cashier_shifts', 'suppliers', 'restock_logs', 'categories', 'users',
+        'cashier_shifts', 'users',
     ];
     if (!in_array($table, $allowed, true)) {
         throw new InvalidArgumentException('Unsupported scoped table.');

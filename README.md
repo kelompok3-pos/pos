@@ -98,6 +98,10 @@ mysql -u root pos_db < database/upgrade_20260610_dashboard_modules.sql
 mysql -u root pos_db < database/upgrade_20260610_saas_tenants.sql
 ```
 
+Setelah upgrade bertanggal selesai, jalankan `php database/migrate.php` lalu
+`php database/verify.php`. Lihat `database/README.md` untuk jalur setup
+canonical.
+
 Buat akun super admin pertama hanya melalui CLI:
 
 ```bash
@@ -220,7 +224,8 @@ POS/
 │   ├── .htaccess                   # URL rewriting
 │   └── assets/                     # File statis (CSS, JS)
 │
-├── routes.php                      # Daftar semua route (URL → Controller)
+├── routes/                         # Route per area: web/admin/kasir/superadmin/api
+├── bootstrap/router.php            # Menggabungkan semua route
 │
 ├── app/                            # Kode aplikasi MVC
 │   ├── Controllers/                # Controller (menerima request)
@@ -229,11 +234,9 @@ POS/
 │   │   ├── Admin/                  # Group: Admin
 │   │   │   └── AdminProductController.php
 │   │   └── Kasir/                  # Group: Kasir
-│   │       ├── KasirProductController.php
 │   │       └── KasirTransactionController.php
 │   │
 │   ├── Models/                     # Model (akses database)
-│   │   ├── Product.php
 │   │   └── Transaction.php
 │   │
 │   └── Views/                      # View (tampilan HTML)
@@ -368,7 +371,7 @@ Buat folder `app/Views/admin/category/` lalu buat file:
 
 ### Langkah 4: Daftarkan Route
 
-Tambahkan di `routes.php`:
+Tambahkan di file route yang sesuai di `routes/`:
 
 ```php
 // === ADMIN - KATEGORI ===
@@ -398,15 +401,15 @@ CREATE TABLE IF NOT EXISTS categories (
 ## Arsitektur MVC
 
 ```
-Browser → public/index.php → routes.php → Controller → Model → Database
+Browser → public/index.php → bootstrap/router.php → Controller → Service/Repository → Database
                                                      ↘ View → HTML Response → Browser
 ```
 
 ### Penjelasan:
 
 1. **Browser** mengirim request ke URL (misal: `/admin/product`)
-2. **index.php** menerima request, load konfigurasi & routes
-3. **routes.php** mencocokkan URL dengan Controller yang sesuai
+2. **index.php** menerima request, load konfigurasi dan router
+3. **bootstrap/router.php** menggabungkan file di `routes/` dan mencocokkan URL
 4. **Controller** memproses request:
    - Memanggil **Model** untuk ambil/simpan data dari database
    - Memanggil **View** untuk menampilkan HTML
@@ -415,11 +418,10 @@ Browser → public/index.php → routes.php → Controller → Model → Databas
 
 ### Aturan Penamaan Controller (dalam subfolder):
 
-| File                                           | Class Name               | Di routes.php                    |
+| File                                           | Class Name               | Di routes/*.php                  |
 | ---------------------------------------------- | ------------------------ | -------------------------------- |
 | `Controllers/HomeController.php`               | `HomeController`         | `'HomeController'`               |
 | `Controllers/Admin/AdminProductController.php` | `AdminProductController` | `'Admin/AdminProductController'` |
-| `Controllers/Kasir/KasirProductController.php` | `KasirProductController` | `'Kasir/KasirProductController'` |
 
 **Pola:** Nama class = `{Role}{Module}Controller`, Path di routes = `{Folder}/{NamaClass}`
 

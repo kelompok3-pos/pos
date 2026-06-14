@@ -1,7 +1,0 @@
--- =================================================================
--- DEPRECATED DATABASE INITIALIZATION FILE
--- =================================================================
--- Docker Compose now mounts database/pos_db.sql into
--- /docker-entrypoint-initdb.d/01-pos_db.sql.
--- Keep schema changes in database/pos_db.sql only.
--- =================================================================

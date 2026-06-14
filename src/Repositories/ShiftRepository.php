@@ -17,9 +17,6 @@ final class ShiftRepository extends ScopedRepository
             'total_transactions' => 0,
             'status' => 'open',
         ];
-        if ($this->hasColumn('total_revenue')) {
-            $data['total_revenue'] = 0;
-        }
         $id = $this->insert($data);
         $_SESSION['shift_id'] = $id;
         AuditLogger::log($this->actor, 'OPEN_SHIFT', 'cashier_shifts', $id, null, $data, $this->pdo);
@@ -29,16 +26,17 @@ final class ShiftRepository extends ScopedRepository
     public function close(int $id, float $closingCash): bool
     {
         $shift = $this->findById($id);
+        if ($shift === null
+            || (int) $shift['kasir_id'] !== $this->actor->user_id
+            || ($shift['status'] ?? '') !== 'open'
+        ) {
+            throw new UnauthorizedException('Shift does not belong to the current cashier or is already closed.');
+        }
         $data = [
             'closed_at' => date('Y-m-d H:i:s'),
             'closing_cash' => max(0, $closingCash),
             'status' => 'closed',
         ];
-        if ($this->hasColumn('expected_cash')) {
-            $expected = (float) ($shift['opening_cash'] ?? 0) + (float) ($shift['total_revenue'] ?? 0);
-            $data['expected_cash'] = $expected;
-            $data['cash_difference'] = $closingCash - $expected;
-        }
         $closed = $this->update($id, $data);
         if ($closed) {
             unset($_SESSION['shift_id']);

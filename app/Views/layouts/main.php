@@ -6,13 +6,13 @@ $userRole = $_SESSION['role'] ?? 'guest';
 $userName = $_SESSION['name'] ?? 'Guest';
 
 $currentRole = currentRole();
-$isCashier = isRole('kasir');
+$isCashier = isRole(ROLE_KASIR);
 
 $brandUrl = $isCashier ? '/kasir/transaction' : '/dashboard';
 $userInitial = strtoupper(substr($userName, 0, 2));
 
 $menus = [
-    'super_admin' => [
+    ROLE_SUPER_ADMIN => [
         ['Platform Overview', '/superadmin/dashboard', 'ti-layout-dashboard', 'nav-dashboard'],
         ['Toko', '/superadmin/stores', 'ti-building-store', 'nav-stores'],
         ['User Management', '/admin/user', 'ti-users', 'nav-users'],
@@ -20,15 +20,7 @@ $menus = [
         ['Audit Log', '/superadmin/audit', 'ti-shield-check', 'nav-audit'],
         ['Settings', '/settings', 'ti-settings', 'nav-settings'],
     ],
-    'superadmin' => [
-        ['Platform Overview', '/superadmin/dashboard', 'ti-layout-dashboard', 'nav-dashboard'],
-        ['Toko', '/superadmin/stores', 'ti-building-store', 'nav-stores'],
-        ['User Management', '/admin/user', 'ti-users', 'nav-users'],
-        ['Laporan Lintas Toko', '/superadmin/reports', 'ti-chart-bar', 'nav-reports'],
-        ['Audit Log', '/superadmin/audit', 'ti-shield-check', 'nav-audit'],
-        ['Settings', '/settings', 'ti-settings', 'nav-settings'],
-    ],
-    'admin' => [
+    ROLE_ADMIN => [
         ['Dashboard', '/dashboard', 'ti-home', 'nav-dashboard'],
         ['User Management', '/admin/user', 'ti-users', 'nav-users'],
         ['Product Management', '/admin/product', 'ti-package', 'nav-products'],
@@ -36,7 +28,7 @@ $menus = [
         ['Expenses', '/admin/expense', 'ti-receipt-tax', 'nav-expenses'],
         ['Reports', '/reports', 'ti-chart-bar', 'nav-reports'],
     ],
-    'kasir' => [
+    ROLE_KASIR => [
         ['POS / Cashier', '/kasir/transaction', 'ti-cash-register', 'nav-transaction'],
         ['My Transactions', '/kasir/my-transactions', 'ti-receipt', 'nav-my-transactions'],
         ['My Shift', '/kasir/shift', 'ti-clock', 'nav-shift'],

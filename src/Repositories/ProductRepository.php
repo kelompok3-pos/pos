@@ -17,14 +17,12 @@ final class ProductRepository extends ScopedRepository
     public function findActiveById(int $id): ?array
     {
         $row = $this->findById($id);
-        return $row && (!$this->hasColumn('deleted_at') || $row['deleted_at'] === null) ? $this->legacyAliases($row) : null;
+        return $row && $row['deleted_at'] === null ? $row : null;
     }
 
     public function softDelete(int $id): bool
     {
-        return $this->hasColumn('deleted_at')
-            ? $this->update($id, ['deleted_at' => date('Y-m-d H:i:s')])
-            : $this->update($id, ['status' => 'inactive']);
+        return $this->update($id, ['deleted_at' => date('Y-m-d H:i:s')]);
     }
 
     public function countActiveRecords(): int
@@ -39,9 +37,8 @@ final class ProductRepository extends ScopedRepository
 
     public function lowStock(int $threshold): array
     {
-        $minStock = $this->hasColumn('min_stock') ? 'min_stock' : 'minimum_stock';
         return $this->selectProducts(
-            "stock <= CASE WHEN {$minStock} > 0 THEN {$minStock} ELSE ? END
+            "stock <= CASE WHEN minimum_stock > 0 THEN minimum_stock ELSE ? END
              AND status = 'active'" . $this->notDeleted(),
             [$threshold],
             'stock ASC, name ASC'
@@ -72,10 +69,7 @@ final class ProductRepository extends ScopedRepository
         if (!$this->actor->isSuperAdmin()) {
             array_unshift($params, $this->actor->requireStoreId());
         }
-        $select = $this->hasColumn('selling_price')
-            ? '*, selling_price AS price, min_stock AS minimum_stock'
-            : '*';
-        $stmt = $this->pdo->prepare("SELECT {$select} FROM products WHERE {$scope}{$condition} ORDER BY {$order}");
+        $stmt = $this->pdo->prepare("SELECT * FROM products WHERE {$scope}{$condition} ORDER BY {$order}");
         $stmt->execute($params);
         return $stmt->fetchAll();
     }
@@ -90,15 +84,6 @@ final class ProductRepository extends ScopedRepository
 
     private function notDeleted(): string
     {
-        return $this->hasColumn('deleted_at') ? ' AND deleted_at IS NULL' : '';
-    }
-
-    private function legacyAliases(array $row): array
-    {
-        if (isset($row['selling_price'])) {
-            $row['price'] = $row['selling_price'];
-            $row['minimum_stock'] = $row['min_stock'];
-        }
-        return $row;
+        return ' AND deleted_at IS NULL';
     }
 }

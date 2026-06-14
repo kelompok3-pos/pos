@@ -221,8 +221,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function getTourSteps() {
-    const normalizedRole = userRole === "superadmin" ? "super_admin" : userRole;
-    const steps = tourWorkflows[normalizedRole] || [];
+    const steps = tourWorkflows[userRole] || [];
 
     return steps.filter(function (step) {
       return isTourTargetVisible(

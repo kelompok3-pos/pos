@@ -57,7 +57,6 @@ CREATE TABLE IF NOT EXISTS transactions (
     change_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
     payment_method ENUM('cash', 'qris', 'card') NOT NULL DEFAULT 'cash',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (cashier_id) REFERENCES users(id),
     UNIQUE KEY transactions_store_id_id_unique (store_id, id),
     UNIQUE KEY transactions_store_code_unique (store_id, transaction_code),
     INDEX transactions_store_created_idx (store_id, created_at)
@@ -85,7 +84,6 @@ CREATE TABLE IF NOT EXISTS transaction_items (
     quantity INT NOT NULL DEFAULT 1,
     subtotal DECIMAL(12,2) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
     INDEX transaction_items_store_transaction_idx (store_id, transaction_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -109,8 +107,6 @@ CREATE TABLE IF NOT EXISTS stock_movements (
     stock_after INT NOT NULL,
     note VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
     INDEX stock_movements_store_product_idx (store_id, product_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -156,6 +152,56 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     INDEX audit_logs_store_created_idx (store_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Canonical tenant and cross-store constraints.
+ALTER TABLE users
+    ADD CONSTRAINT users_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT;
+ALTER TABLE products
+    ADD CONSTRAINT products_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT;
+ALTER TABLE transactions
+    ADD CONSTRAINT transactions_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT transactions_store_cashier_fk
+        FOREIGN KEY (store_id, cashier_id) REFERENCES users(store_id, id) ON DELETE RESTRICT;
+ALTER TABLE transaction_items
+    ADD CONSTRAINT transaction_items_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT transaction_items_store_transaction_fk
+        FOREIGN KEY (store_id, transaction_id) REFERENCES transactions(store_id, id) ON DELETE RESTRICT;
+ALTER TABLE stock_movements
+    ADD CONSTRAINT stock_movements_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT stock_movements_store_product_fk
+        FOREIGN KEY (store_id, product_id) REFERENCES products(store_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT stock_movements_store_user_fk
+        FOREIGN KEY (store_id, user_id) REFERENCES users(store_id, id) ON DELETE RESTRICT;
+ALTER TABLE expenses
+    ADD CONSTRAINT expenses_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT expenses_created_by_fk FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT;
+ALTER TABLE cashier_shifts
+    ADD CONSTRAINT cashier_shifts_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT cashier_shifts_store_kasir_fk
+        FOREIGN KEY (store_id, kasir_id) REFERENCES users(store_id, id) ON DELETE RESTRICT;
+ALTER TABLE settings
+    ADD CONSTRAINT settings_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT;
+ALTER TABLE audit_logs
+    ADD CONSTRAINT audit_logs_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT audit_logs_user_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT;
+
+ALTER TABLE expenses
+    ADD INDEX IF NOT EXISTS expenses_store_created_idx (store_id, created_at);
+
+CREATE TABLE IF NOT EXISTS migrations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    filename VARCHAR(255) NOT NULL UNIQUE,
+    applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO migrations (filename) VALUES
+('001_add_store_scope.sql'),
+('002_create_operational_security_tables.sql'),
+('003_scope_settings.sql'),
+('004_add_cross_store_constraints.sql'),
+('005_enforce_tenant_foreign_keys.sql'),
+('006_add_canonical_indexes.sql'),
+('007_remove_redundant_foreign_keys.sql');
+
 INSERT IGNORE INTO tenants (id, name, status) VALUES (1, 'Default Store', 'active');
 
 INSERT IGNORE INTO settings (store_id, setting_key, setting_value) VALUES
@@ -166,15 +212,3 @@ INSERT IGNORE INTO settings (store_id, setting_key, setting_value) VALUES
 (1, 'tax_percentage', '0'),
 (1, 'receipt_footer', 'Terima kasih sudah berbelanja.'),
 (1, 'system_timezone', 'Asia/Jakarta');
-
--- ==========================================
--- DATA SAMPLE
--- ==========================================
-
--- Sample Products
-INSERT INTO products (store_id, name, price, stock, description) VALUES
-(1, 'Kopi Arabica', 25000, 100, 'Kopi arabica premium dari Toraja'),
-(1, 'Teh Hijau', 15000, 50, 'Teh hijau organik'),
-(1, 'Roti Gandum', 18000, 75, 'Roti gandum segar'),
-(1, 'Susu Segar', 12000, 200, 'Susu segar 1 liter'),
-(1, 'Air Mineral', 5000, 500, 'Air mineral 600ml');

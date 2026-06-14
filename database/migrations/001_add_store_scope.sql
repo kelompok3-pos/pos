@@ -1,5 +1,3 @@
-USE pos_db;
-
 ALTER TABLE products ADD COLUMN IF NOT EXISTS store_id INT NULL AFTER id;
 UPDATE products SET store_id = 1 WHERE store_id IS NULL;
 ALTER TABLE products MODIFY store_id INT NOT NULL;
@@ -34,10 +32,10 @@ ALTER TABLE stock_movements MODIFY store_id INT NOT NULL;
 ALTER TABLE stock_movements ADD INDEX IF NOT EXISTS stock_movements_store_product_idx (store_id, product_id, created_at);
 
 ALTER TABLE products
-    ADD CONSTRAINT products_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id);
+    ADD CONSTRAINT products_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT;
 ALTER TABLE transactions
-    ADD CONSTRAINT transactions_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id);
+    ADD CONSTRAINT transactions_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT;
 ALTER TABLE transaction_items
-    ADD CONSTRAINT transaction_items_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id);
+    ADD CONSTRAINT transaction_items_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT;
 ALTER TABLE stock_movements
-    ADD CONSTRAINT stock_movements_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id);
+    ADD CONSTRAINT stock_movements_store_fk FOREIGN KEY (store_id) REFERENCES tenants(id) ON DELETE RESTRICT;

@@ -99,24 +99,7 @@ if ($isCashierPanel) {
         'tone' => 'brand',
     ];
 
-    $quickActions[] = [
-        'url' => url('/kasir/product'),
-        'icon' => 'ti-search',
-        'title' => 'Cari Produk',
-        'desc' => 'Lihat harga dan stok tersedia.',
-        'tour' => 'quick-product-search',
-        'tone' => 'mint',
-    ];
 }
-
-$quickActions[] = [
-    'url' => url('/report/daily/export'),
-    'icon' => 'ti-download',
-    'title' => 'Export CSV',
-    'desc' => 'Unduh laporan penjualan hari ini.',
-    'tour' => 'quick-export',
-    'tone' => 'violet',
-];
 
 $kpis = [
     [

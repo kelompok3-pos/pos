@@ -52,10 +52,10 @@ function env(string $key, mixed $default = null): mixed
 define('APP_NAME', env('APP_NAME', 'POS App'));
 define('APP_ENV', env('APP_ENV', 'local'));
 define('APP_URL', env('APP_URL', 'http://localhost'));
-define('BASE_PATH', dirname(__DIR__));
+defined('BASE_PATH') || define('BASE_PATH', dirname(__DIR__));
 
 // Start session
-if (session_status() === PHP_SESSION_NONE) {
+if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {
     ini_set('session.use_strict_mode', '1');
     ini_set('session.use_only_cookies', '1');
     $secureCookie = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || APP_ENV === 'production';

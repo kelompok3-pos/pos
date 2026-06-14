@@ -146,17 +146,6 @@ abstract class ScopedRepository
         }
     }
 
-    protected function hasColumn(string $column): bool
-    {
-        $this->assertIdentifier($column);
-        $stmt = $this->pdo->prepare(
-            'SELECT COUNT(*) FROM information_schema.columns
-             WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
-        );
-        $stmt->execute([$this->table, $column]);
-        return (int) $stmt->fetchColumn() > 0;
-    }
-
     private function safeOrderBy(string $orderBy): string
     {
         if (!preg_match('/^[a-z_][a-z0-9_]*(?:\s+(?:ASC|DESC))?$/i', trim($orderBy))) {

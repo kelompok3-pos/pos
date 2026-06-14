@@ -97,11 +97,7 @@ class User
      */
     public function findByEmail(string $email): array|false
     {
-        $hasDeletedAt = $this->hasColumn('users', 'deleted_at');
-        $hasStatus = $this->hasColumn('users', 'status');
-        $where = $hasDeletedAt ? ' AND deleted_at IS NULL' : '';
-        $where .= $hasStatus ? " AND status = 'active'" : '';
-        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE email = ?{$where}");
+        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE email = ? AND deleted_at IS NULL");
         $stmt->execute([$email]);
         return $stmt->fetch();
     }
@@ -238,21 +234,7 @@ class User
 
     public function touchLastLogin(int $id): void
     {
-        if (!$this->hasColumn('users', 'last_login')) {
-            return;
-        }
-        $stmt = $this->pdo->prepare('UPDATE users SET last_login = NOW() WHERE id = ?');
-        $stmt->execute([$id]);
-    }
-
-    private function hasColumn(string $table, string $column): bool
-    {
-        $stmt = $this->pdo->prepare(
-            'SELECT COUNT(*) FROM information_schema.columns
-             WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
-        );
-        $stmt->execute([$table, $column]);
-        return (int) $stmt->fetchColumn() > 0;
+        // The canonical schema does not persist last-login timestamps.
     }
 
     /**

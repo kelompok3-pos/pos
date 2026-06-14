@@ -114,8 +114,8 @@ class AuthController extends Controller
     {
         $role = currentRole();
         $this->redirect(match ($role) {
-            'kasir' => '/kasir/transaction',
-            'super_admin', 'superadmin' => '/superadmin/dashboard',
+            ROLE_KASIR => '/kasir/transaction',
+            ROLE_SUPER_ADMIN => '/superadmin/dashboard',
             default => '/dashboard',
         });
     }

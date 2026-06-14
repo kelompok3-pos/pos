@@ -1,7 +1,6 @@
 <?php
 
 require_once __DIR__ . '/../Controller.php';
-require_once BASE_PATH . '/app/Models/Product.php';
 
 /**
  * =================================================================
@@ -22,12 +21,12 @@ require_once BASE_PATH . '/app/Models/Product.php';
 
 class AdminProductController extends Controller
 {
-    private Product $productModel;
+    private ProductRepository $products;
 
     public function __construct()
     {
-        allowOnly(['admin']);
-        $this->productModel = new Product();
+        allowOnly([ROLE_ADMIN]);
+        $this->products = new ProductRepository(getConnection(), ActorContext::fromSession());
     }
 
     /**
@@ -35,7 +34,7 @@ class AdminProductController extends Controller
      */
     public function index(): void
     {
-        $products = $this->productModel->getAllForManagement();
+        $products = $this->products->management();
 
         $this->view('admin/product/index', [
             'title'    => 'Daftar Produk',
@@ -71,7 +70,7 @@ class AdminProductController extends Controller
             $this->redirect('/admin/product/create');
         }
 
-        $this->productModel->create([
+        $this->products->insert([
             'name'        => $name,
             'price'       => $price,
             'stock'       => $stock,
@@ -101,7 +100,7 @@ class AdminProductController extends Controller
             flash('error', 'Produk tidak ditemukan.');
             $this->redirect('/admin/product');
         }
-        $product = $this->productModel->getById($id);
+        $product = $this->products->findActiveById((int) $id);
 
         if (!$product) {
             flash('error', 'Produk tidak ditemukan.');
@@ -143,7 +142,7 @@ class AdminProductController extends Controller
             $this->redirect('/admin/product/edit?id=' . $id);
         }
 
-        $this->productModel->update($id, [
+        $this->products->update((int) $id, [
             'name'        => $name,
             'price'       => $price,
             'stock'       => $stock,
@@ -175,7 +174,7 @@ class AdminProductController extends Controller
             $this->redirect('/admin/product');
         }
 
-        $this->productModel->delete($id);
+        $this->products->softDelete((int) $id);
 
         flash('success', 'Produk berhasil dihapus!');
         $this->redirect('/admin/product');
@@ -195,7 +194,7 @@ class AdminProductController extends Controller
         if (!in_array($status, ['active', 'inactive'], true)) {
             flash('error', 'Status produk tidak valid.');
         } else {
-            $this->productModel->setStatus($id, $status);
+            $this->products->update($id, ['status' => $status]);
             flash('success', 'Status produk diperbarui.');
         }
         $this->redirect('/admin/product');
@@ -216,7 +215,7 @@ class AdminProductController extends Controller
             if (!$data || empty($data['name'])) {
                 continue;
             }
-            $this->productModel->create([
+            $this->products->insert([
                 'name' => $data['name'],
                 'price' => (float) ($data['price'] ?? 0),
                 'stock' => (int) ($data['stock'] ?? 0),

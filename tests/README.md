@@ -15,20 +15,16 @@ This folder contains QA documentation and semi-automated tests for the native PH
 
 ## Test Files
 
-- `QA_TESTING_REPORT.md` - Full QA strategy, checklist, bugs, risks, and recommendations.
 - `http-smoke-tests.ps1` - Semi-automated HTTP tests using PowerShell web requests.
 - `pos-business-rules-test.php` - Lightweight PHP checks for POS calculation rules.
+- `tenant-isolation-test.php` - Store ownership and cross-tenant checks.
+- `role-access-rules-test.php` - Route and role authorization checks.
 
 ## Requirements
 
 - XAMPP Apache and MySQL running, or PHP built-in server running.
 - Database imported from `database/pos_db.sql`.
-- If the database already existed before recent changes, run:
-
-```sql
-SOURCE database/upgrade_20260602_payment_change.sql;
-SOURCE database/upgrade_20260603_super_admin_role.sql;
-```
+- Run `php database/migrate.php` and `php database/verify.php`.
 
 ## Run PHP Business Rule Tests
 

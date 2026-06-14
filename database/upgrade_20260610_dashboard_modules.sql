@@ -1,5 +1,3 @@
-USE pos_db;
-
 ALTER TABLE users
     ADD COLUMN IF NOT EXISTS created_by INT DEFAULT NULL AFTER store_id;
 

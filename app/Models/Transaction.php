@@ -20,9 +20,6 @@ class Transaction
      */
     public function getAll(): array
     {
-        if ($this->hasColumn('transactions', 'total')) {
-            return $this->retailTransactions();
-        }
         $stmt = $this->pdo->prepare(
             "SELECT t.*, u.name AS cashier_name
              FROM transactions t
@@ -41,9 +38,6 @@ class Transaction
      */
     public function getToday(): array
     {
-        if ($this->hasColumn('transactions', 'total')) {
-            return $this->retailTransactions('DATE(t.created_at) = CURDATE()');
-        }
         $stmt = $this->pdo->prepare(
             "SELECT t.*, u.name AS cashier_name
              FROM transactions t
@@ -64,19 +58,6 @@ class Transaction
      */
     public function getById(int $id): array|false
     {
-        if ($this->hasColumn('transactions', 'total')) {
-            $stmt = $this->pdo->prepare(
-                "SELECT t.*, t.kasir_id AS cashier_id, t.total AS total_price,
-                        t.cash_received AS paid_amount, u.name AS cashier_name,
-                        pm.type AS payment_method
-                 FROM transactions t
-                 LEFT JOIN users u ON t.kasir_id = u.id
-                 LEFT JOIN payment_methods pm ON pm.id = t.payment_method_id
-                 WHERE t.id = ? AND (? IS NULL OR t.store_id = ?)"
-            );
-            $stmt->execute([$id, $this->storeId, $this->storeId]);
-            return $stmt->fetch();
-        }
         $stmt = $this->pdo->prepare(
             "SELECT t.*, u.name AS cashier_name
              FROM transactions t
@@ -197,15 +178,6 @@ class Transaction
 
     public function getByCashier(int $cashierId, string $date = ''): array
     {
-        if ($this->hasColumn('transactions', 'total')) {
-            $condition = 't.kasir_id = ?';
-            $params = [$cashierId];
-            if ($date !== '') {
-                $condition .= ' AND DATE(t.created_at) = ?';
-                $params[] = $date;
-            }
-            return $this->retailTransactions($condition, $params);
-        }
         $sql = "SELECT t.*, u.name AS cashier_name
                 FROM transactions t
                 INNER JOIN users u ON t.cashier_id = u.id
@@ -240,19 +212,6 @@ class Transaction
      */
     public function getRecentTransactions(): array
     {
-        if ($this->hasColumn('transactions', 'total')) {
-            $stmt = $this->pdo->prepare(
-                "SELECT t.id, CONCAT('TRX-', LPAD(t.id, 6, '0')) AS transaction_code,
-                        t.total AS total_price, t.cash_received AS paid_amount,
-                        t.change_amount, t.created_at, u.name AS cashier_name
-                 FROM transactions t
-                 JOIN users u ON t.kasir_id = u.id
-                 WHERE (? IS NULL OR t.store_id = ?)
-                 ORDER BY t.created_at DESC LIMIT 5"
-            );
-            $stmt->execute([$this->storeId, $this->storeId]);
-            return $stmt->fetchAll();
-        }
         $stmt = $this->pdo->prepare("
             SELECT t.id, t.transaction_code, t.total_price, t.paid_amount,
                    t.change_amount, t.created_at, u.name AS cashier_name
@@ -298,32 +257,6 @@ class Transaction
         if (empty($items)) {
             return false;
         }
-        if ($this->hasColumn('transactions', 'payment_method_id')) {
-            try {
-                $lookup = $this->pdo->prepare(
-                    'SELECT id FROM payment_methods
-                     WHERE is_active = 1 AND (LOWER(name) = ? OR LOWER(type) = ?) ORDER BY id LIMIT 1'
-                );
-                $lookup->execute([strtolower($paymentMethod), strtolower($paymentMethod)]);
-                $paymentMethodId = (int) $lookup->fetchColumn();
-                if ($paymentMethodId <= 0) {
-                    throw new RuntimeException('Metode pembayaran tidak tersedia.');
-                }
-                return (new RetailTransactionService($this->pdo, $this->actor))->submit([
-                    'items' => array_map(static fn(array $item): array => [
-                        'product_id' => (int) $item['product_id'],
-                        'qty' => (int) $item['quantity'],
-                        'item_discount' => 0,
-                    ], $items),
-                    'transaction_discount' => 0,
-                    'payment_method_id' => $paymentMethodId,
-                    'cash_received' => $paidAmount,
-                ]);
-            } catch (Throwable $exception) {
-                error_log($exception->__toString());
-                return false;
-            }
-        }
         $storeId = $this->actor->requireStoreId();
 
         try {
@@ -337,6 +270,17 @@ class Transaction
             $stmtCashier->execute([$cashierId, $storeId]);
             if (!$stmtCashier->fetchColumn()) {
                 throw new UnauthorizedException('Cashier does not belong to the current store.');
+            }
+
+            $stmtShift = $this->pdo->prepare(
+                "SELECT id FROM cashier_shifts
+                 WHERE store_id = ? AND kasir_id = ? AND status = 'open'
+                 ORDER BY id DESC LIMIT 1 FOR UPDATE"
+            );
+            $stmtShift->execute([$storeId, $cashierId]);
+            $shiftId = (int) $stmtShift->fetchColumn();
+            if ($shiftId <= 0) {
+                throw new RuntimeException('Buka shift sebelum memproses transaksi.');
             }
 
             $stmtStock = $this->pdo->prepare(
@@ -435,12 +379,15 @@ class Transaction
                 ]);
             }
 
-            $stmtShift = $this->pdo->prepare(
+            $stmtShiftUpdate = $this->pdo->prepare(
                 "UPDATE cashier_shifts
                  SET total_transactions = total_transactions + 1
-                 WHERE store_id = ? AND kasir_id = ? AND status = 'open'"
+                 WHERE id = ? AND store_id = ? AND kasir_id = ? AND status = 'open'"
             );
-            $stmtShift->execute([$storeId, $cashierId]);
+            $stmtShiftUpdate->execute([$shiftId, $storeId, $cashierId]);
+            if ($stmtShiftUpdate->rowCount() !== 1) {
+                throw new RuntimeException('Shift tidak lagi aktif.');
+            }
 
             $this->pdo->commit();
             try {
@@ -616,32 +563,4 @@ class Transaction
         return $stmt->fetchAll();
     }
 
-    private function hasColumn(string $table, string $column): bool
-    {
-        $stmt = $this->pdo->prepare(
-            'SELECT COUNT(*) FROM information_schema.columns
-             WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
-        );
-        $stmt->execute([$table, $column]);
-        return (int) $stmt->fetchColumn() > 0;
-    }
-
-    private function retailTransactions(string $condition = '1 = 1', array $params = []): array
-    {
-        $scope = $this->storeId === null ? '' : ' AND t.store_id = ?';
-        if ($this->storeId !== null) {
-            $params[] = $this->storeId;
-        }
-        $stmt = $this->pdo->prepare(
-            "SELECT t.*, t.kasir_id AS cashier_id, t.total AS total_price,
-                    t.cash_received AS paid_amount, u.name AS cashier_name,
-                    pm.type AS payment_method
-             FROM transactions t
-             LEFT JOIN users u ON t.kasir_id = u.id
-             LEFT JOIN payment_methods pm ON pm.id = t.payment_method_id
-             WHERE {$condition}{$scope} ORDER BY t.id DESC"
-        );
-        $stmt->execute($params);
-        return $stmt->fetchAll();
-    }
 }
